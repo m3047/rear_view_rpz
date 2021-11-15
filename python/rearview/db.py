@@ -438,7 +438,6 @@ class RearView(object):
         Scheduling:
             Association queue.
         """
-        print('process_answer()...')
         if response.question[0].rdtype not in self.ADDRESS_RECORDS:
             return
 
