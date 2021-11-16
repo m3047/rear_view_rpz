@@ -68,3 +68,7 @@ REARVIEW.EXAMPLE.COM IN SOA  DEV.NULL. DNS.EXAMPLE.COM. (
                                 )
                         NS      LOCALHOST.
 ```
+
+## How do I compile _BIND_?
+
+Look at [this Dockerfile](https://github.com/m3047/shodohflo/blob/master/examples/docker/Dockerfile) for inspiration. You will need to install the _Framestream_ and _Protobuf_ developer libraries / packages. You can download the source [here](https://www.isc.org/bind/).
