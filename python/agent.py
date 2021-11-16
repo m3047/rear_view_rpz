@@ -61,8 +61,6 @@ import asyncio
 import dns.rdatatype as rdatatype
 import dns.rcode as rcode
 
-sys.path.insert(0,path.dirname(path.dirname(path.abspath(__file__))))
-
 from shodohflo.fstrm import Consumer, Server, AsyncUnixSocket
 import shodohflo.protobuf.dnstap as dnstap
 from shodohflo.statistics import StatisticsFactory
