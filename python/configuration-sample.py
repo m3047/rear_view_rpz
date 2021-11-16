@@ -8,6 +8,12 @@ SOCKET_ADDRESS = '/tmp/dnstap'
 #LOG_LEVEL = logging.INFO
 LOG_LEVEL = None
 
+# This one is similar to LOG_LEVEL. It's really intended for internal / debugging
+# use, but this way it doesn't get inadvertently left turned on when I commit
+# code. Unlike LOG_LEVEL this isn't the logging level but the routine to call
+# to actually print the message.
+#PRINT_COROUTINE_ENTRY_EXIT = logging.info
+
 # If statistics reporting is desired, set this to the number of seconds between
 # reports.
 # STATS = 600 # 10 minutes

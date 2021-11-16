@@ -67,6 +67,7 @@ from shodohflo.statistics import StatisticsFactory
 
 from rearview.db import RearView
 
+PRINT_COROUTINE_ENTRY_EXIT = None
 if __name__ == "__main__":
     from configuration import *
 else:
@@ -83,7 +84,6 @@ if LOG_LEVEL is not None:
 CONTENT_TYPE = 'protobuf:dnstap.Dnstap'
 
 # Start/end of coroutines. You will probably also want to enable it in shodohflo.fstrm.
-PRINT_COROUTINE_ENTRY_EXIT = logging.info
 if PRINT_COROUTINE_ENTRY_EXIT:
     import rearview.db
     import rearview.rpz
