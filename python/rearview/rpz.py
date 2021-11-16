@@ -63,7 +63,12 @@ class Connection(object):
         self.reader_ = self.writer_ = None
         return
     
-    async def make_request(self, request=None):
+    def timer(self, collection):
+        """Helper for marshalling coroutines."""
+        collection = getattr(self, collection)
+        return collection and collection.start_timer() or None
+
+    async def make_request(self, request=None, timer=None):
         """Sends the request and returns the response.
         
         Context is a TCP connection. Request and response are the naked
@@ -72,8 +77,6 @@ class Connection(object):
         """
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> rpz.Connection.make_request()')
-        if self.request_stats:
-            timer = self.request_stats.start_timer()
 
         # Open a connection if necessary.
         if self.writer_ is None and request is not None:
@@ -202,6 +205,11 @@ class RPZ(object):
             PRINT_COROUTINE_ENTRY_EXIT('< rpz.RPZ.close()')
         return
     
+    def timer(self, collection):
+        """Helper for marshalling coroutines."""
+        collection = getattr(self, collection)
+        return collection and collection.start_timer() or None
+    
     def create_task(self, task):
         """Create a task in the RPZ queue."""
         self.task_queue.put_nowait(task)
@@ -245,7 +253,7 @@ class RPZ(object):
         # Construct the AXFR request and send it.
         req = dns.message.make_query(self.rpz, 'AXFR')
         wire_req = req.to_wire()
-        wire_resp = await self.conn_.make_request(wire_req)
+        wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
         resp = dns.message.from_wire(wire_resp, xfr=True)
         if resp.rcode() != rcode.NOERROR:
             self.global_error('axfr - rcode', resp)
@@ -273,7 +281,7 @@ class RPZ(object):
                         continue
                     for rr in rrset:
                         self.process_zone_rec(name, rrset.rdtype, rr.to_text(), associations)
-                wire_resp = await self.conn_.make_request(None) # Get another response, no question asked.
+                wire_resp = await self.conn_.make_request(None, self.conn_.timer('request_stats')) # Get another response, no question asked.
                 resp = dns.message.from_wire(wire_resp, xfr=True)
                 if resp.rcode() != rcode.NOERROR:
                     self.global_error('axfr - rcode 2', resp)
@@ -291,7 +299,7 @@ class RPZ(object):
         
         return
 
-    async def load_axfr(self, associations):
+    async def load_axfr(self, associations, timer):
         """Use AXFR to load the RPZ context and populate associations.
         
         associations is a db.Associator object.
@@ -300,8 +308,6 @@ class RPZ(object):
         """
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> rpz.RPZ.load_axfr()')
-        if self.axfr_stats:
-            timer = self.axfr_stats.start_timer()
 
         await self.load_axfr_(associations)
         
@@ -325,7 +331,7 @@ class RPZ(object):
         update.delete(qname)
         
         wire_req = update.to_wire()
-        wire_resp = await self.conn_.make_request(wire_req)
+        wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
         resp = dns.message.from_wire(wire_resp)
         
         if resp.rcode() != rcode.NOERROR:
@@ -333,15 +339,13 @@ class RPZ(object):
         
         return
     
-    async def delete(self, address):
+    async def delete(self, address, timer):
         """Remove the specified address from the RPZ.
         
         The address is a string.
         """
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> rpz.RPZ.delete()')
-        if self.delete_stats:
-            timer = self.delete_stats.start_timer()
 
         await self.delete_(address)
         
@@ -385,7 +389,7 @@ class RPZ(object):
         )
         
         wire_req = update.to_wire()
-        wire_resp = await self.conn_.make_request(wire_req)
+        wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
         resp = dns.message.from_wire(wire_resp)
         
         if resp.rcode() != rcode.NOERROR:
@@ -393,15 +397,13 @@ class RPZ(object):
         
         return
 
-    async def update(self, address, score):
+    async def update(self, address, score, timer):
         """Add / update the specified address in the RPZ.
         
         The address is a db.Address object.
         """
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> rpz.RPZ.update()')
-        if self.update_stats:
-            timer = self.delete_stats.start_timer()
             
         await self.update_(address, score)
 

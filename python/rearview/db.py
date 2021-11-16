@@ -284,7 +284,7 @@ class RearView(object):
         cache_eviction_scheduled = False
 
         # Kick off a job to load the context with AXFR.
-        self.rpz.create_task(self.rpz.load_axfr(self.associations))
+        self.rpz.create_task(self.rpz.load_axfr(self.associations, self.rpz.timer('axfr_stats')))
 
         return
     
@@ -293,7 +293,7 @@ class RearView(object):
     
         # If it doesn't exist then check if it needs to be deleted from the RPZ.
         if address not in self.associations.addresses:
-            self.rpz.create_task(self.rpz.delete(address))
+            self.rpz.create_task(self.rpz.delete(address, self.rpz.timer('delete_stats')))
             return None
         address = self.associations.addresses[address]
         resolutions = []
@@ -317,7 +317,7 @@ class RearView(object):
             
         return (address, score)
 
-    async def solve(self, address):
+    async def solve(self, address, timer):
         """Solve the name for an address.
         
         Scheduling:
@@ -325,11 +325,10 @@ class RearView(object):
         """
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> db.RearView.solve()')
-        if self.solve_stats:
-            timer = self.solve_stats.start_timer()
             
         update = self.solve_(address)
         if update:
+            update += (self.rpz.timer('update_stats'),)
             self.rpz.create_task(self.rpz.update( *update ))
         
         if self.solve_stats:
@@ -338,7 +337,7 @@ class RearView(object):
             PRINT_COROUTINE_ENTRY_EXIT('< db.RearView.solve()')
         return
         
-    async def do_cache_eviction(self):
+    async def do_cache_eviction(self, timer):
         """Perform cache eviction.
         
         Scheduling:
@@ -347,8 +346,6 @@ class RearView(object):
         """
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> db.RearView.do_cache_eviction()')
-        if self.cache_stats:
-            timer = self.cache_stats.start_timer()
 
         for address in self.associations.do_cache_eviction():
             self.solver_queue.put_nowait(
@@ -373,7 +370,7 @@ class RearView(object):
         if self.cache_eviction_scheduled:
             return
         self.cache_eviction_scheduled = True
-        self.event_loop.create_task(self.do_cache_eviction())
+        self.event_loop.create_task(self.do_cache_eviction(self.cache_stats and self.cache_stats.start_timer() or None))
         return
 
     def process_answer_(self, response):
@@ -409,7 +406,7 @@ class RearView(object):
         
         return added
     
-    async def process_answer_coro(self, response):
+    async def process_answer_coro(self, response, timer):
         """Coroutine generating updates to the memory view.
         
         Scheduling:
@@ -418,12 +415,10 @@ class RearView(object):
         """
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> db.RearView.process_answer_coro()')
-        if self.answer_stats:
-            timer = self.answer_stats.start_timer()
 
         for address in self.process_answer_(response):
             self.solver_queue.put_nowait(
-                self.solve(address)
+                self.solve(address, self.solve_stats and self.solve_stats.start_timer() or None)
             )
             
         if self.answer_stats:
@@ -442,7 +437,7 @@ class RearView(object):
             return
 
         self.association_queue.put_nowait(
-            self.process_answer_coro(response)
+            self.process_answer_coro(response, self.answer_stats and self.answer_stats.start_timer() or None)
         )
 
         return

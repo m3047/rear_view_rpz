@@ -217,7 +217,7 @@ class TestRPZAccess(TestCase):
 
         associator = Associator(self.ASSOCIATOR_CACHE_SIZE, Mock())
         self.event_loop.run_until_complete(
-                self.rpz.load_axfr( associator )
+                self.rpz.load_axfr( associator, None )
             )
 
         self.assertEqual( len(self.rpz.contents), 2 )
@@ -240,11 +240,11 @@ class TestRPZAccess(TestCase):
         
         associator = Associator(self.ASSOCIATOR_CACHE_SIZE, Mock())
         self.event_loop.run_until_complete(
-                self.rpz.load_axfr( associator )
+                self.rpz.load_axfr( associator, None )
             )
 
         self.event_loop.run_until_complete(
-                self.rpz.delete( TEST_RECORDS[1][3] )
+                self.rpz.delete( TEST_RECORDS[1][3], None )
             )
         
         resolver = Resolver()
@@ -268,11 +268,11 @@ class TestRPZAccess(TestCase):
         
         associator = Associator(self.ASSOCIATOR_CACHE_SIZE, Mock())
         self.event_loop.run_until_complete(
-                self.rpz.load_axfr( associator )
+                self.rpz.load_axfr( associator, None )
             )
 
         self.event_loop.run_until_complete(
-            self.rpz.update( address, NEW_SCORE )
+            self.rpz.update( address, NEW_SCORE, None )
         )
         test_key = TEST_RECORDS[0][0] + '.' + TEST_ZONE + '.'
         
