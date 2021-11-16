@@ -54,7 +54,9 @@ make it difficult.
 import sys
 from os import path
 import logging
-import traceback
+
+# TODO: Better logging for coroutines which fail.
+#import traceback
 
 import asyncio
 
