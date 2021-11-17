@@ -32,18 +32,6 @@ from .rpz import RPZ
 
 PRINT_COROUTINE_ENTRY_EXIT = None
 
-class SolverResult(object):
-    """Syntactic sugar!"""
-    def __init(self):
-        self.result = None
-        return
-    
-    def __call__(self, v):
-        self.result = v
-        return self
-    
-    def exists(self):
-        return 
 class Address(object):
     """An IP address, with one or more resolutions."""
     def __init__(self, address):
