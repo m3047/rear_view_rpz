@@ -144,7 +144,7 @@ class EndOfZone(EOFError):
     pass
 
 class TelemetryPackage(dict):
-    
+    """When we load from the RPZ this is what we get."""
     CONVERSIONS = dict(
         ptr = lambda x:x,
         depth = lambda x:int(x),
