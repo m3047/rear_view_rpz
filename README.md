@@ -26,3 +26,5 @@ ___BIND___ runs as a service answering user (and application) DNS requests. In t
 Put it together and you get **PTR responses enhanced with local knowledge**.
 
 Run the policy incorporating this _RPZ_ as a view, possibly bound to a special address, and any client which wants "xray vision" for tools which support it just has to point their network configuration at the appropriate address for DNS services. (If you're running a service which needs the "ground truth" for DNS, have a different view on a different address for that.) In other words: you can do all the admin in _BIND_.
+
+Here is a post with an example: http://lists.redbarn.org/pipermail/dnsfirewalls/2021-November/000422.html
