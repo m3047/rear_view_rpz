@@ -122,6 +122,12 @@ class Resolution(Heuristics):
         self.reload_score = reload_score
         return
     
+    def __eq__(self, other):
+        return self.chain == other.chain
+        
+    def __lt__(self, other):
+        return self.chain < other.chain
+        
     def seen(self):
         self.query_trend = 0.9 * self.query_trend + 0.1 * (time() - self.last_seen)
         self.last_seen = time()
