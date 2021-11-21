@@ -1,3 +1,10 @@
+# Things in this directory
+
+#### `systemd` service files
+
+* `rearview-rpz.service` Runs a second copy of _BIND_. See the [Optional DNS Service Case Study](https://github.com/m3047/rear_view_rpz/blob/main/README.md).
+* `rearview-agent.service` Runs `agent.py`.
+
 # Really simple install instructions
 
 ***what could go wrong?***
