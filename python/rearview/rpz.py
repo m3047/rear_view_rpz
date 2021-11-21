@@ -360,6 +360,13 @@ class RPZ(object):
         """Internal method."""
         # Get the expected resolution. When this is called by RearView.solve() the
         # best resolution has been determined.
+        if not address.best_resolution:
+            logging.error(
+                'update_(): best_resolution is None for address:{} with resolutions:{}'.format(
+                    address.address, [ k for k in address.resolutions.keys() ]
+                )
+            )
+            return
         qname = address_to_reverse(address.address) + self.rpz
         ptr_value = address.best_resolution.chain[-1].rstrip('.') + '.'
         zone_entry = self.contents.get(qname)

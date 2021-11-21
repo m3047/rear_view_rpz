@@ -315,8 +315,8 @@ class RearView(object):
             else:
                 need_update = False
                 logging.error(
-                    'best resolution is None for address:{} with resolutions:{}'.format(
-                        address, [ k for k in address.resolutions.keys() ]
+                    'solve_(): resolution is None for address:{} with resolutions:{}'.format(
+                        address.address, [ k for k in address.resolutions.keys() ]
                     )
                 )
             
