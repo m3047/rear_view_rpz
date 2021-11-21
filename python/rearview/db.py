@@ -17,6 +17,7 @@
 All async methods belong to the RearView class.
 """
 
+import traceback
 import asyncio
 from asyncio import Queue
 
@@ -319,7 +320,7 @@ class RearView(object):
         """
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> db.RearView.solve()')
-            
+
         update = self.solve_(address)
         if update:
             update += (self.rpz.timer('update_stats'),)
@@ -341,11 +342,15 @@ class RearView(object):
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> db.RearView.do_cache_eviction()')
 
-        for address in self.associations.do_cache_eviction():
-            self.solver_queue.put_nowait(
-                self.solve(address, self.solve_stats and self.solve_stats.start_timer() or None)
-            )
-        self.cache_eviction_scheduled = False
+        try:
+            for address in self.associations.do_cache_eviction():
+                self.solver_queue.put_nowait(
+                    self.solve(address, self.solve_stats and self.solve_stats.start_timer() or None)
+                )
+            self.cache_eviction_scheduled = False
+        except Exception as e:
+            traceback.print_exc()
+            self.event_loop.stop()
 
         if self.cache_stats:
             timer.stop()
@@ -452,8 +457,13 @@ class RearView(object):
                 queue = self.association_queue
                 task = await self.association_queue.get()
 
-            await task
-            queue.task_done()
+            try:
+                await task
+                queue.task_done()
+            except Exception as e:
+                traceback.print_exc()
+                self.event_loop.stop()
+                return
             
         # This actually never exits.
         if PRINT_COROUTINE_ENTRY_EXIT:

@@ -19,6 +19,7 @@ We try to keep what's in the telemetry view and what's actually being served by
 the zone in sync.
 """
 
+import traceback
 import logging
 
 from time import time
@@ -421,8 +422,13 @@ class RPZ(object):
         while True:
             task = await self.task_queue.get()
             self.conn_.keep_open = not self.task_queue.empty()
-            await task
-            self.task_queue.task_done()
+            try:
+                await task
+                self.task_queue.task_done()
+            except Exception as e:
+                traceback.print_exc()
+                self.event_loop.stop()
+                return
 
         # This actually never exits.
         if PRINT_COROUTINE_ENTRY_EXIT:
