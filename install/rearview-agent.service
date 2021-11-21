@@ -1,0 +1,12 @@
+[Unit]
+Description=Rear View Dnstap Agent
+Requires=named.service
+After=named.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/share/rear_view_rpz/python/agent.py
+Restart=on-failure
+
+[Install]
+WantedBy=named.service
