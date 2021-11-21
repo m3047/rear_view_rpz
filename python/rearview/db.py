@@ -343,7 +343,7 @@ class RearView(object):
 
         for address in self.associations.do_cache_eviction():
             self.solver_queue.put_nowait(
-                self.solve(address)
+                self.solve(address, self.solve_stats and self.solve_stats.start_timer() or None)
             )
         self.cache_eviction_scheduled = False
 
