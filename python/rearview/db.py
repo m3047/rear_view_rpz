@@ -18,6 +18,8 @@ All async methods belong to the RearView class.
 """
 
 import traceback
+import logging
+
 import asyncio
 from asyncio import Queue
 
@@ -308,9 +310,17 @@ class RearView(object):
         )
           
         if need_update:
-            address.best_resolution = resolution
+            if resolution is not None:
+                address.best_resolution = resolution
+            else:
+                need_update = False
+                logging.error(
+                    'best resolution is None for address:{} with resolutions:{}'.format(
+                        address, [ k for k in address.resolutions.keys() ]
+                    )
+                )
             
-        return (address, score)
+        return need_update and (address, score) or None
 
     async def solve(self, address, timer):
         """Solve the name for an address.
