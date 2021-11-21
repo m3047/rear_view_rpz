@@ -33,6 +33,8 @@ import dns.message
 import dns.rdatatype as rdatatype
 import dns.rcode as rcode
 import dns.query
+from dns.exception import DNSException
+
 # The class has a different name (UpdateMessage) in dnspython 2.x. This is for
 # version 1.x.
 # TODO: Which version of dnspython ships with SuSE Leap 15.3?
@@ -398,7 +400,12 @@ class RPZ(object):
         
         wire_req = update.to_wire()
         wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
-        resp = dns.message.from_wire(wire_resp)
+        try:
+            resp = dns.message.from_wire(wire_resp)
+        except DNSException as e:
+            logging.error('Invalid DNS response to ({} -> {})'.format(address.address, ptr_value))
+            self.conn_.close()
+            return
         
         if resp.rcode() != rcode.NOERROR:
             self.global_error('update', resp)
