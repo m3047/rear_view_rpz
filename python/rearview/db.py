@@ -275,7 +275,7 @@ class RearView(object):
                                 )
         self.processor_ = self.event_loop.create_task(self.queue_processor())
         self.rpz = RPZ(event_loop, dns_server, rpz, statistics)
-        cache_eviction_scheduled = False
+        self.cache_eviction_scheduled = False
 
         # Kick off a job to load the context with AXFR.
         self.rpz.create_task(self.rpz.load_axfr(self.associations, self.rpz.timer('axfr_stats')))
