@@ -68,8 +68,8 @@ $ORIGIN .
 $TTL 600        ; 10 minutes
 REARVIEW.EXAMPLE.COM IN SOA  DEV.NULL. DNS.EXAMPLE.COM. (
                                 1          ; serial
-                                600        ; refresh (10 minutes)
-                                60         ; retry (1 minute)
+                                30         ; refresh
+                                15         ; retry
                                 86400      ; expire (1 day)
                                 600        ; minimum (10 minutes)
                                 )
