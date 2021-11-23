@@ -81,6 +81,7 @@ A comparison of pertinent details is provided in the following table. Code fragm
 | `options:listen-on` | All of the interface addresses (including `localhost`) except for the one which the RPZ instance will listen on. | The address for the special service. |
 | `options:directory` | `/etc/namedb` | `/etc/namedb-rv` |
 | `options:query-source` | The external (internet facing) interface. | The special service address. |
+| `options:max-cache-size` | `20%` | `20m` |
 | `options:response-policy` zones | The standard best practice configuration (several RPZs), excluding _Rear View_. | Just the _Rear View_ RPZ. |
 | `options:response-policy` zone `min-interval` | n/a | `zone "name" min-interval 10;` |
 | `options:dnstap` and `options:dnstap-output` | configured | not configured |
