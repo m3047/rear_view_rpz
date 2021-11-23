@@ -1,0 +1,14 @@
+[Unit]
+Description=Rearview BIND Instance
+After=network.target
+
+[Service]
+# Leap 15.0 doesn't support exec. FWM, 16-Jan-2019
+#Type=exec
+Type=forking
+ExecStart=/usr/local/sbin/named -4 -d2 -c /etc/named-rv.conf
+ExecReload=/usr/local/sbin/rndc -c /etc/rndc-rv.conf reload
+ExecStop=/usr/local/sbin/rndc -c /etc/rndc-rv.conf stop
+
+[Install]
+WantedBy=multi-user.target
