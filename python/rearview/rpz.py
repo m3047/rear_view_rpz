@@ -37,7 +37,6 @@ from dns.exception import DNSException
 
 # The class has a different name (UpdateMessage) in dnspython 2.x. This is for
 # version 1.x.
-# TODO: Which version of dnspython ships with SuSE Leap 15.3?
 from dns.update import Update as Updater
 
 PRINT_COROUTINE_ENTRY_EXIT = None
