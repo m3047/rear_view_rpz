@@ -55,9 +55,6 @@ import sys
 from os import path
 import logging
 
-# TODO: Better logging for coroutines which fail.
-#import traceback
-
 import asyncio
 
 import dns.rdatatype as rdatatype
