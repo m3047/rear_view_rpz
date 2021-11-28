@@ -1,6 +1,8 @@
 # Rear View RPZ
 
-Turn your recursive DNS (BIND) server into a network investigation enabler with _DnsTap_ and _Response Policy Zones!_.
+___status: public beta, I expect it to work if you satisfy the prerequisites. tested with python 3.6 & 3.8; dnspython 1.15 & 2.1; bind 9.12.3 & 9.16.23___
+
+Turn your recursive DNS (BIND) server into a network investigation enabler with _DnsTap_ and _Response Policy Zones!_
 
 ## What are "DnsTap" and "Response Policy Zones"?
 
