@@ -1,0 +1,137 @@
+m3047@sophia:~/GitHub/rear_view_rpz/python> dig @127.0.0.1 www.cnn.com
+
+; <<>> DiG 9.12.3-P1 <<>> @127.0.0.1 www.cnn.com
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54804
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+; COOKIE: 04b5f7fa4c6aded4a8b6a4b3619299ce772407a3c447a114 (good)
+;; QUESTION SECTION:
+;www.cnn.com.                   IN      A
+
+;; ANSWER SECTION:
+www.cnn.COM.            297     IN      CNAME   turner-tls.map.fastly.net.
+turner-tls.map.fastly.net. 27   IN      A       151.101.53.67
+
+;; Query time: 0 msec
+;; SERVER: 127.0.0.1#53(127.0.0.1)
+;; WHEN: Mon Nov 15 09:33:02 PST 2021
+;; MSG SIZE  rcvd: 134
+
+m3047@sophia:~/GitHub/rear_view_rpz/python> dig @127.0.0.1
+rearview.m3047.net axfr
+
+; <<>> DiG 9.12.3-P1 <<>> @127.0.0.1 rearview.m3047.net axfr
+; (1 server found)
+;; global options: +cmd
+REARVIEW.M3047.NET.     600     IN      SOA     DEV.NULL.
+M3047.M3047.NET. 2 600 60 86400 600
+REARVIEW.M3047.NET.     600     IN      NS      LOCALHOST.
+67.53.101.151.in-addr.arpa.rearview.m3047.net. 600 IN TXT
+"depth=2,first=1636997584.330454,last=1636997584.330457,count=1,trend=0.0,score=0.6666666666666666"
+67.53.101.151.in-addr.arpa.rearview.m3047.net. 600 IN PTR www.cnn.com.
+REARVIEW.M3047.NET.     600     IN      SOA     DEV.NULL.
+M3047.M3047.NET. 2 600 60 86400 600
+;; Query time: 0 msec
+;; SERVER: 127.0.0.1#53(127.0.0.1)
+;; WHEN: Mon Nov 15 09:33:10 PST 2021
+;; XFR size: 5 records (messages 1, bytes 382)
+
+m3047@sophia:~/GitHub/rear_view_rpz/python> dig @127.0.0.1 infoblox.com
+
+; <<>> DiG 9.12.3-P1 <<>> @127.0.0.1 infoblox.com
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 36850
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+; COOKIE: 666ea36e97a11479a198007e61929a416afc140bc683c5cc (good)
+;; QUESTION SECTION:
+;infoblox.com.                  IN      A
+
+;; ANSWER SECTION:
+infoblox.com.           3600    IN      A       23.185.0.3
+
+;; Query time: 109 msec
+;; SERVER: 127.0.0.1#53(127.0.0.1)
+;; WHEN: Mon Nov 15 09:34:57 PST 2021
+;; MSG SIZE  rcvd: 85
+
+m3047@sophia:~/GitHub/rear_view_rpz/python> dig @127.0.0.1
+rearview.m3047.net axfr
+
+; <<>> DiG 9.12.3-P1 <<>> @127.0.0.1 rearview.m3047.net axfr
+; (1 server found)
+;; global options: +cmd
+REARVIEW.M3047.NET.     600     IN      SOA     DEV.NULL.
+M3047.M3047.NET. 3 600 60 86400 600
+REARVIEW.M3047.NET.     600     IN      NS      LOCALHOST.
+67.53.101.151.in-addr.arpa.rearview.m3047.net. 600 IN TXT
+"depth=2,first=1636997584.330454,last=1636997584.330457,count=1,trend=0.0,score=0.6666666666666666"
+67.53.101.151.in-addr.arpa.rearview.m3047.net. 600 IN PTR www.cnn.com.
+3.0.185.23.in-addr.arpa.rearview.m3047.net. 600 IN TXT
+"depth=1,first=1636997699.3390522,last=1636997699.3390543,count=1,trend=0.0,score=0.5"
+3.0.185.23.in-addr.arpa.rearview.m3047.net. 600 IN PTR infoblox.com.
+REARVIEW.M3047.NET.     600     IN      SOA     DEV.NULL.
+M3047.M3047.NET. 3 600 60 86400 600
+;; Query time: 0 msec
+;; SERVER: 127.0.0.1#53(127.0.0.1)
+;; WHEN: Mon Nov 15 09:35:02 PST 2021
+;; XFR size: 7 records (messages 1, bytes 547)
+
+m3047@sophia:~/GitHub/rear_view_rpz/python> dig -x 23.185.0.3
+
+; <<>> DiG 9.12.3-P1 <<>> -x 23.185.0.3
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 31234
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+; COOKIE: c99baad9134300b5c7c0938361929b634fc1d9fd56d9f674 (good)
+;; QUESTION SECTION:
+;3.0.185.23.in-addr.arpa.       IN      PTR
+
+;; AUTHORITY SECTION:
+23.in-addr.arpa.        10800   IN      SOA     z.arin.net.
+dns-ops.arin.net. 2017032657 1800 900 691200 10800
+
+;; Query time: 1174 msec
+;; SERVER: 10.0.0.220#53(10.0.0.220)
+;; WHEN: Mon Nov 15 09:39:47 PST 2021
+;; MSG SIZE  rcvd: 149
+
+m3047@sophia:~/GitHub/rear_view_rpz/python> dig @127.0.0.1 -x 23.185.0.3
+
+; <<>> DiG 9.12.3-P1 <<>> @127.0.0.1 -x 23.185.0.3
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 46633
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 2
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+; COOKIE: fa006de254213cbe5d5ecfe061929b727fc60cca0a56dc9a (good)
+;; QUESTION SECTION:
+;3.0.185.23.in-addr.arpa.       IN      PTR
+
+;; ANSWER SECTION:
+3.0.185.23.in-addr.arpa. 5      IN      PTR     infoblox.com.
+
+;; ADDITIONAL SECTION:
+REARVIEW.M3047.NET.     1       IN      SOA     DEV.NULL.
+M3047.M3047.NET. 3 600 60 86400 600
+
+;; Query time: 437 msec
+;; SERVER: 127.0.0.1#53(127.0.0.1)
+;; WHEN: Mon Nov 15 09:40:02 PST 2021
+;; MSG SIZE  rcvd: 174
