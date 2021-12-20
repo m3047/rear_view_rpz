@@ -137,6 +137,7 @@ class ZoneContents(dict):
     The key is the name and the value is a ZoneEntry.
     """
     def update_entry(self, rname, rtype, rval):
+        rname = rname.split('.in-addr.arpa')[0] + '.in-addr.arpa'
         if rname not in self:
             self[rname] = ZoneEntry( rname )
         self[rname].update(rtype, rval)
@@ -167,11 +168,11 @@ class TelemetryPackage(dict):
         
 def reverse_to_address(reverse_ref):
     """Take the reverse lookup qname format and extract the address."""
-    return '.'.join(reversed(reverse_ref.replace('.in-addr.arpa.','').split('.')))
+    return '.'.join(reversed(reverse_ref.split('.in-addr.arpa')[0].split('.')))
 
 def address_to_reverse(address):
     """Take the address and construct the reverse lookup format."""
-    return '{}.in-addr.arpa.'.format('.'.join(reversed(address.split('.'))))
+    return '{}.in-addr.arpa'.format('.'.join(reversed(address.split('.'))))
     
 class RPZ(object):
     
@@ -321,7 +322,7 @@ class RPZ(object):
     
     async def delete_(self, address):
         """Internal method."""
-        qname = address_to_reverse(address) + self.rpz
+        qname = address_to_reverse(address)
         if qname not in self.contents:
             return
 
@@ -329,6 +330,7 @@ class RPZ(object):
         del self.contents[qname]
         
         # Remove it from the zone.
+        qname +=  '.' + self.rpz
         update = Updater(self.rpz)
         update.delete(qname)
         
@@ -368,7 +370,7 @@ class RPZ(object):
                 )
             )
             return
-        qname = address_to_reverse(address.address) + self.rpz
+        qname = address_to_reverse(address.address)
         ptr_value = address.best_resolution.chain[-1].rstrip('.') + '.'
         zone_entry = self.contents.get(qname)
         if (  zone_entry is not None
@@ -380,6 +382,7 @@ class RPZ(object):
         
         self.contents.update_entry(qname, rdatatype.PTR, ptr_value)
 
+        qname = qname + '.'  + self.rpz
         update = Updater(self.rpz)
         update.delete(qname)
         update.add(qname, TTL, rdatatype.PTR, ptr_value)
