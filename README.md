@@ -38,9 +38,11 @@ If we get some more road dirt, maybe we can get some more playbooks: by all mean
 open an issue.
 
 * You are familiar with running and configuring _BIND_
-* You are familiar with building from source:
-  * satisfying prerequisites
-  * `configure; make; make install...`
+* You are familiar with:
+  1. building from source...
+     * satisfying prerequisites
+     * `configure; make; make install...`
+  1. ...or installing _BIND_ using _ISC's_ packages (https://www.isc.org/bind/)
 * You can use `git clone`
 * You are familiar with _Python_ syntax
 * You can figure out a `systemd` service file
