@@ -157,9 +157,6 @@ class Request(object):
                     for zk in self.rear_view.rpz.contents.keys()
                 ]
         )
-        print(addresses[:3])
-        print([k for k in self.rear_view.rpz.contents.keys()][:3])
-        print(zonekeys[:3])
 
         response = []
         addrs = 0
@@ -230,7 +227,6 @@ class Request(object):
         else:
             response.append('-> MISSING FROM ZONE CONTENTS')
 
-        print(response)
         return 200, response
 
     def entry(self, request):
