@@ -113,6 +113,24 @@ class Address(object):
         del self.resolutions[resolution.chain]
         self.best_resolution = None
         return not self.resolutions
+    
+    def match(self, ptr):
+        """Locate the chain ending in ptr.
+        
+        There could be more than one, in which case (one of the) longest chains
+        is returned, preferentially the one loaded from the zone file.
+        """
+        resolutions = sorted(( (len(chain), chain) for chain in self.resolutions if chain[-1] == ptr ))
+        if not resolutions:
+            return (None,)
+        chain = resolutions[-1]
+        for resolution in reversed(resolutions):
+            if resolution[0] is None:
+                chain = resolution
+                break
+            if resolution[0] < chain[0]:
+                break
+        return chain[1]
         
 class Resolution(Heuristics):
     """A single resolution for an address."""

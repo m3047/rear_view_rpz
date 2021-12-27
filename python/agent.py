@@ -67,6 +67,9 @@ from shodohflo.statistics import StatisticsFactory
 from rearview.db import RearView
 
 PRINT_COROUTINE_ENTRY_EXIT = None
+MAX_READ_SIZE = 1024
+CONTENT_TYPE = 'protobuf:dnstap.Dnstap'
+
 if __name__ == "__main__":
     from configuration import *
 else:
@@ -76,11 +79,13 @@ else:
     DNS_SERVER = '127.0.0.1'
     RESPONSE_POLICY_ZONE = 'rpz.example.com'
     CACHE_SIZE = None
+    CONSOLE = None
+    
+if CONSOLE:
+    import rearview.console as console
 
 if LOG_LEVEL is not None:
     logging.basicConfig(level=LOG_LEVEL)
-
-CONTENT_TYPE = 'protobuf:dnstap.Dnstap'
 
 # Start/end of coroutines. You will probably also want to enable it in shodohflo.fstrm.
 if PRINT_COROUTINE_ENTRY_EXIT:
@@ -191,16 +196,33 @@ async def statistics_report(statistics):
 
 def main():
     logging.info('DNS Agent starting. Socket: {}  RPZ: {}'.format(SOCKET_ADDRESS, RESPONSE_POLICY_ZONE))
+
     event_loop = asyncio.get_event_loop()
+
+    if CONSOLE:
+        console_ctxt = console.Context()
+        console_service = event_loop.run_until_complete(
+                asyncio.start_server(
+                    console_ctxt.handle_requests,
+                    CONSOLE['host'], CONSOLE['port'], 
+                    loop=event_loop, limit=MAX_READ_SIZE
+                )
+            )
+
     if STATS:
         statistics = StatisticsFactory()
         asyncio.run_coroutine_threadsafe(statistics_report(statistics), event_loop)
     else:
         statistics = None
+
+    dnstap = DnsTap(event_loop, statistics)
+    if CONSOLE:
+        console_ctxt.dnstap = dnstap
+
     Server(AsyncUnixSocket(SOCKET_ADDRESS),
-           DnsTap(event_loop, statistics),
-           event_loop
+           dnstap, event_loop
           ).listen_asyncio()
+
     return
 
 if __name__ == '__main__':
