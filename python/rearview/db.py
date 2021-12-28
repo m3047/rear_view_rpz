@@ -154,13 +154,17 @@ class Resolution(Heuristics):
         self_chain = self.chain
         other_chain = other.chain
         if None in self_chain:
+            self_chain = list(self_chain)
             for i in range(len(self_chain)):
                 if self_chain[i] is None:
                     self_chain[i] = ''
+            self_chain = tuple(self_chain)
         if None in other_chain:
+            other_chain = list(other_chain)
             for i in range(len(other_chain)):
                 if other_chain[i] is None:
                     other_chain[i] = ''
+            other_chain = tuple(other_chain)
         
         return self_chain < other_chain
         

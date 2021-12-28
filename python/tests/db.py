@@ -50,6 +50,26 @@ class TestResolution(TestCase):
         
         return
 
+    def test_compare_good(self):
+        """Basic comparison of resolutions."""
+        resolution_1 = db.Resolution(self.CHAIN, TIME_NOW - 10, TIME_NOW - 1)
+        resolution_2 = db.Resolution(('bizz.com', 'www.bar.com'), TIME_NOW - 10, TIME_NOW - 1)
+
+        self.assertTrue( resolution_1 != resolution_2 )
+        self.assertTrue( resolution_1 > resolution_2 )
+        
+        return
+    
+    def test_compare_with_none(self):
+        """One of the resolutions contains none in the chain."""
+        resolution_1 = db.Resolution(self.CHAIN, TIME_NOW - 10, TIME_NOW - 1)
+        resolution_2 = db.Resolution((None, None, 'www.bar.com'), TIME_NOW - 10, TIME_NOW - 1)
+        
+        self.assertTrue( resolution_1 != resolution_2 )
+        self.assertTrue( resolution_1 > resolution_2 )
+        
+        return
+    
 class TestAssociatorUpdate(TestCase):
     """db.Associator.update_resolution()"""
     
