@@ -147,7 +147,22 @@ class Resolution(Heuristics):
         return self.chain == other.chain
         
     def __lt__(self, other):
-        return self.chain < other.chain
+        # There is a corner case where this gets invoked (it's not normal)
+        # and if one of the chains was read from the actual zone, then
+        # it goes sideways because the intermediates are filled with None
+        # on the reload.
+        self_chain = self.chain
+        other_chain = other.chain
+        if None in self_chain:
+            for i in range(len(self_chain)):
+                if self_chain[i] is None:
+                    self_chain[i] = ''
+        if None in other_chain:
+            for i in range(len(other_chain)):
+                if other_chain[i] is None:
+                    other_chain[i] = ''
+        
+        return self_chain < other_chain
         
     def seen(self):
         self.query_trend = 0.9 * self.query_trend + 0.1 * (time() - self.last_seen)

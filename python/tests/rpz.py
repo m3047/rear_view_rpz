@@ -250,10 +250,10 @@ class TestRPZAccess(TestCase):
         resolver = Resolver()
         resolver.nameservers = [ SERVER_ADDRESS ]
 
-        self.assertTrue( TEST_RECORDS[0][0] + '.' + TEST_ZONE + '.' in self.rpz.contents )
+        self.assertTrue( TEST_RECORDS[0][0] in self.rpz.contents )
         self.assertEqual( resolver.query( TEST_RECORDS[0][0] + '.' + TEST_ZONE + '.', 'PTR' ).response.rcode(), rcode.NOERROR )
 
-        self.assertFalse( TEST_RECORDS[1][0] + '.' + TEST_ZONE + '.' in self.rpz.contents )
+        self.assertFalse( TEST_RECORDS[1][0] in self.rpz.contents )
         self.assertRaises( dns.resolver.NXDOMAIN, 
                            resolver.query, TEST_RECORDS[1][0] + '.' + TEST_ZONE + '.', 'PTR'
                          )
@@ -274,17 +274,17 @@ class TestRPZAccess(TestCase):
         self.event_loop.run_until_complete(
             self.rpz.update( address, NEW_SCORE, None )
         )
-        test_key = TEST_RECORDS[0][0] + '.' + TEST_ZONE + '.'
+        test_key = TEST_RECORDS[0][0]
         
         self.assertEqual( self.rpz.contents[test_key].ptr, NEW_CHAIN[-1] )
 
         resolver = Resolver()
         resolver.nameservers = [ SERVER_ADDRESS ]
         
-        self.assertEqual( resolver.query( test_key, 'PTR' ).response.answer[0][0].to_text().lower(), NEW_CHAIN[-1] )
+        self.assertEqual( resolver.query( test_key + '.' + TEST_ZONE + '.', 'PTR' ).response.answer[0][0].to_text().lower(), NEW_CHAIN[-1] )
         params = dict(
             [   p.split('=')
-                for p in resolver.query( test_key, 'TXT' ).response.answer[0][0].to_text().strip('"').split(',')
+                for p in resolver.query( test_key + '.' + TEST_ZONE + '.', 'TXT' ).response.answer[0][0].to_text().strip('"').split(',')
             ]
         )
         self.assertEqual( float(params['score']), NEW_SCORE )
