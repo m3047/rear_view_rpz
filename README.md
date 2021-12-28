@@ -8,7 +8,7 @@ Turn your recursive DNS (BIND) server into a network investigation enabler with 
 
 _DnsTap_ and _Response Policy Zones (RPZ)_ are features available with the [ISC BIND 9](https://www.isc.org/bind/) DNS server. _BIND_ is open source and is nearly ubiquitous in software distributions as either the "go to" or an optional recursive DNS service / server.
 
-Unfortunately _DnsTap_ and _RPZ_ are generally considered to be optional features and so may not be available with the _BIND_ binary installed by your operating system. It's not hard to compile it from source, particularly on linux (or in a linux container).
+Unfortunately _DnsTap_ and _RPZ_ are generally considered to be optional features and so may not be available with the _BIND_ binary installed by your operating system, although _ISC's_ alternate packages are compiled with support. It's not hard to compile it from source, particularly on linux (or in a linux container).
 These features are documented as part of the regular _BIND_ reference manual.
 
 What's perhaps unusual about usage here is putting _DnsTap_ to work to update a zone served and utilized by the same DNS server as an _RPZ_ and utilizing that _RPZ_ not as a "ban hammer" but as a source of preferred information.
