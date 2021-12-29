@@ -207,17 +207,18 @@ class Request(object):
 
         response = []
         
-        if best is None and not (ptr_chain and ptr_chain[0] == None):
-            response.append('! no best resolution')
+        if best is None:
+            if not (ptr_chain and ptr_chain[0] == None):
+                response.append('! no best resolution')
+        else:
+            if best.chain not in addr_rec.resolutions:
+                response.append('! best resolution not in chains')
         
-        if best_chain is not None and best_chain not in addr_rec.resolutions:
-            response.append('! best resolution not in chains')
-        
-        for resolution in sorted(addr_rec.resolutions.keys()):
+        for resolution in sorted(addr_rec.resolutions.values()):
             response.append(
                 '{} {}'.format(
-                    (best_chain is not None and best_chain == resolution) and '***' or '   ',
-                    resolution
+                    (best is not None and best == resolution) and '***' or '   ',
+                    resolution.chain
                 )
             )
         
