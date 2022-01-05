@@ -142,7 +142,7 @@ class TestRPZAccess(TestCase):
     
     def setUp(self):
         self.event_loop = asyncio.get_event_loop()
-        self.rpz = rpz.RPZ( self.event_loop, SERVER_ADDRESS, TEST_ZONE, None, RearView.DEFAULT_ADDRESS_RECORDS )
+        self.rpz = rpz.RPZ( self.event_loop, SERVER_ADDRESS, TEST_ZONE, None, RearView.DEFAULT_ADDRESS_RECORDS, None )
         self.remove = set()
         return
     
