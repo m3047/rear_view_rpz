@@ -413,7 +413,7 @@ class TestRearView(TestCase):
     
     def basic_rear_view(self):
         associations = db.Associator(self.CACHE_SIZE, Mock())
-        return Mock(associations=associations, ADDRESS_RECORDS=db.RearView.ADDRESS_RECORDS), associations
+        return Mock(associations=associations, address_record_types=db.RearView.DEFAULT_ADDRESS_RECORDS), associations
     
     def test_solve_deleted(self):
         """An address which is missing from the telemetry view."""

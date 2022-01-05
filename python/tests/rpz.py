@@ -89,7 +89,7 @@ if '..' not in sys.path:
     sys.path.insert(0,'..')
 
 import rearview.rpz as rpz
-from rearview.db import Associator, Address
+from rearview.db import Associator, Address, RearView
 
 TEST_ZONE = 'test.rpz.example.com'
 SERVER_ADDRESS = '127.0.0.1'
@@ -142,7 +142,7 @@ class TestRPZAccess(TestCase):
     
     def setUp(self):
         self.event_loop = asyncio.get_event_loop()
-        self.rpz = rpz.RPZ( self.event_loop, SERVER_ADDRESS, TEST_ZONE, None )
+        self.rpz = rpz.RPZ( self.event_loop, SERVER_ADDRESS, TEST_ZONE, None, RearView.DEFAULT_ADDRESS_RECORDS )
         self.remove = set()
         return
     

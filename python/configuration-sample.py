@@ -34,3 +34,6 @@ CACHE_SIZE = None
 # structures. Set this to a dict with 'host' and 'port' keys.
 CONSOLE = None
 # CONSOLE = dict(host='127.0.0.1', port=3047)
+
+# Only IPv4 is supported at the moment, and is the default.
+#ADDRESS_CLASSES = { rdatatype.A }
