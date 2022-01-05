@@ -295,10 +295,13 @@ class RearView(object):
     in the RPZ should be less than this although the exact number can vary.
     """
     
-    ADDRESS_RECORDS = { rdatatype.A, rdatatype.AAAA }
+    # TODO: Ip6 is not presently supported.
+    #DEFAULT_ADDRESS_RECORDS = { rdatatype.A, rdatatype.AAAA }
+    DEFAULT_ADDRESS_RECORDS = { rdatatype.A }
     DEFAULT_CACHE_SIZE = 10000
     
-    def __init__(self, event_loop, dns_server, rpz, statistics=None, cache_size=None):
+    def __init__(self, event_loop, dns_server, rpz, statistics=None, cache_size=None,
+                 address_record_types=DEFAULT_ADDRESS_RECORDS, garbage_logger=logging.warning):
         self.event_loop = event_loop
         if statistics is not None:
             self.solve_stats = statistics.Collector("solve")
@@ -306,6 +309,8 @@ class RearView(object):
             self.answer_stats = statistics.Collector("process answer")
         else:
             self.solve_stats = self.cache_stats = self.answer_stats = None
+
+        self.address_record_types = address_record_types
         
         self.association_queue = Queue(loop=event_loop)
         #self.eviction_queue = Queue(loop=event_loop)   # Cache evictions are done more or less "real time".
@@ -314,7 +319,7 @@ class RearView(object):
                                        self.schedule_cache_eviction
                                 )
         self.processor_ = self.event_loop.create_task(self.queue_processor())
-        self.rpz = RPZ(event_loop, dns_server, rpz, statistics)
+        self.rpz = RPZ(event_loop, dns_server, rpz, statistics, address_record_types, garbage_logger)
         self.cache_eviction_scheduled = False
 
         # Kick off a job to load the context with AXFR.
@@ -430,7 +435,7 @@ class RearView(object):
             for rr in rrset:
                 rval = rr.to_text().lower()
                 associations[rval] = qname
-                if rrset.rdtype in self.ADDRESS_RECORDS:
+                if rrset.rdtype in self.address_record_types:
                     addresses.add(rval)
 
         added = []
@@ -479,7 +484,7 @@ class RearView(object):
         Scheduling:
             Association queue.
         """
-        if response.question[0].rdtype not in self.ADDRESS_RECORDS:
+        if response.question[0].rdtype not in self.address_record_types:
             return
 
         self.association_queue.put_nowait(

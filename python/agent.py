@@ -69,6 +69,8 @@ from rearview.db import RearView
 PRINT_COROUTINE_ENTRY_EXIT = None
 MAX_READ_SIZE = 1024
 CONTENT_TYPE = 'protobuf:dnstap.Dnstap'
+ADDRESS_CLASSES = { rdatatype.A }
+GARBAGE_LOGGER = logging.warning
 
 if __name__ == "__main__":
     from configuration import *
@@ -111,7 +113,7 @@ class DnsTap(Consumer):
                           setting this to None, but then you'll get potentially
                           strange client addresses logged to Redis.
         """
-        self.rear_view = RearView(event_loop, DNS_SERVER, RESPONSE_POLICY_ZONE, statistics, CACHE_SIZE)
+        self.rear_view = RearView(event_loop, DNS_SERVER, RESPONSE_POLICY_ZONE, statistics, CACHE_SIZE, ADDRESS_CLASSES, GARBAGE_LOGGER)
         self.message_type = message_type
         if STATS:
             self.consume_stats = statistics.Collector("consume")

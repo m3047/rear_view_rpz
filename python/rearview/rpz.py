@@ -28,6 +28,7 @@ import asyncio
 from asyncio import Queue
 
 import socket
+import re
 
 import dns.message
 import dns.rdatatype as rdatatype
@@ -177,11 +178,17 @@ def address_to_reverse(address):
 class RPZ(object):
     
     RDTYPES = set((rdatatype.PTR, rdatatype.TXT))
+    BYTE_REGEX = '(?:25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})'
+    V4ADDR_REGEX = '[.]'.join((BYTE_REGEX,) * 4)
+    REV4_RE = re.compile(V4ADDR_REGEX + '[.]in-addr[.]arpa', re.ASCII|re.IGNORECASE)
+    # TODO: Ip6 here
     
-    def __init__(self, event_loop, server, rpz, statistics):
+    def __init__(self, event_loop, server, rpz, statistics, address_record_types, garbage_logger):
         self.event_loop = event_loop
         self.server = server
         self.rpz = rpz.lower().rstrip('.') + '.'
+        self.address_record_types = address_record_types
+        self.garbage_logger = garbage_logger
         self.task_queue = Queue(loop=event_loop)
         self.processor_ = self.event_loop.create_task(self.queue_processor())
         self.conn_ = Connection(event_loop, server, rpz, statistics)
@@ -223,11 +230,20 @@ class RPZ(object):
         
         This updates both the RPZ view and the telemetry view.
         """
+        if not (rdatatype.A in self.address_record_types
+            and self.REV4_RE.match(qname)
+            # TODO: Ip6 here.
+            ):
+            if self.garbage_logger:
+                self.garbage_logger('unexpected qname {} in zonefile on load'.format(qname))
+            return
+        
         self.contents.update_entry(qname, rtype, rval)
 
         # For telemetry updates, wait until we have all of the info for an update.
         if qname not in self.telemetry_data_cache:
             self.telemetry_data_cache[qname] = TelemetryPackage()
+
         if   rtype == rdatatype.PTR:
             self.telemetry_data_cache[qname].set( 'ptr', rval )
         elif rtype == rdatatype.TXT:
