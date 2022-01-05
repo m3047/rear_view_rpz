@@ -47,3 +47,22 @@ Briefly, there are three views of the data in the current implementation:
 This tool can show if there are discrepancies between the two in-memory views, detailed info for
 an address in all of the views, depths of processing queues (not the same as statistics), and information
 about the cache eviction queue.
+
+### Messages
+
+##### unexpected qname {} in zonefile on load
+
+During zone load when the agent is initializing, `TXT` and `PTR` records with qnames like `4.3.2.1.in-addr.arpa` are loaded
+and other records are rejected.
+
+What you should do about this message depends on what you're doing with the zone. If you're not doing anything with
+the zone yourself, you should manually remove the entries from the zone file:
+
+1. `rndc freeze`
+2. Remove the offending records from the zone file and **increment the serial number**.
+3. `rndc thaw`
+
+On the other hand if you're putting your own `PTR` or `TXT` records in the zone, you may want to simply
+make the agent shut up. You can do this by setting `GARBAGE_LOGGER = None` in your configuration.
+
+History: At one time there was a bug where IPv6 records were loaded incorrectly.
