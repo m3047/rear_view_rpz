@@ -37,3 +37,8 @@ CONSOLE = None
 
 # Only IPv4 is supported at the moment, and is the default.
 #ADDRESS_CLASSES = { rdatatype.A }
+
+# This controls what happens to garbage records in the actual zone. The
+# default is logging.warning.
+# GARBAGE_LOGGER = logging.warning
+# GARBAGE_LOGGER = None

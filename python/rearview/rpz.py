@@ -183,11 +183,12 @@ class RPZ(object):
     REV4_RE = re.compile(V4ADDR_REGEX + '[.]in-addr[.]arpa', re.ASCII|re.IGNORECASE)
     # TODO: Ip6 here
     
-    def __init__(self, event_loop, server, rpz, statistics, address_record_types):
+    def __init__(self, event_loop, server, rpz, statistics, address_record_types, garbage_logger):
         self.event_loop = event_loop
         self.server = server
         self.rpz = rpz.lower().rstrip('.') + '.'
         self.address_record_types = address_record_types
+        self.garbage_logger = garbage_logger
         self.task_queue = Queue(loop=event_loop)
         self.processor_ = self.event_loop.create_task(self.queue_processor())
         self.conn_ = Connection(event_loop, server, rpz, statistics)
@@ -233,7 +234,8 @@ class RPZ(object):
             and self.REV4_RE.match(qname)
             # TODO: Ip6 here.
             ):
-            logging.warning('unexpected qname {} in zonefile on load'.format(qname))
+            if self.garbage_logger:
+                self.garbage_logger('unexpected qname {} in zonefile on load'.format(qname))
             return
         
         self.contents.update_entry(qname, rtype, rval)

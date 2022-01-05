@@ -300,7 +300,8 @@ class RearView(object):
     DEFAULT_ADDRESS_RECORDS = { rdatatype.A }
     DEFAULT_CACHE_SIZE = 10000
     
-    def __init__(self, event_loop, dns_server, rpz, statistics=None, cache_size=None, address_record_types=DEFAULT_ADDRESS_RECORDS):
+    def __init__(self, event_loop, dns_server, rpz, statistics=None, cache_size=None,
+                 address_record_types=DEFAULT_ADDRESS_RECORDS, garbage_logger=logging.warning):
         self.event_loop = event_loop
         if statistics is not None:
             self.solve_stats = statistics.Collector("solve")
@@ -318,7 +319,7 @@ class RearView(object):
                                        self.schedule_cache_eviction
                                 )
         self.processor_ = self.event_loop.create_task(self.queue_processor())
-        self.rpz = RPZ(event_loop, dns_server, rpz, statistics, address_record_types)
+        self.rpz = RPZ(event_loop, dns_server, rpz, statistics, address_record_types, garbage_logger)
         self.cache_eviction_scheduled = False
 
         # Kick off a job to load the context with AXFR.
