@@ -35,8 +35,9 @@ CACHE_SIZE = None
 CONSOLE = None
 # CONSOLE = dict(host='127.0.0.1', port=3047)
 
-# Only IPv4 is supported at the moment, and is the default.
-#ADDRESS_CLASSES = { rdatatype.A }
+# The default is to include IPv4 and IPv6.
+#import dns.rdatatype as rdatatype
+#ADDRESS_CLASSES = { rdatatype.A, rdatatype.AAAA }
 
 # This controls what happens to garbage records in the actual zone. The
 # default is logging.warning.
