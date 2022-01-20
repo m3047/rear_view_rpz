@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2022 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ The commands are synchronous with respect to the operation of the server, which
 is to say the server isn't doing anything else until the underlying operation
 has completed. This provides a better snapshot of the state at any given moment,
 but can negatively impact data collection from a busy server.
+
+IPv6 addresses are expected to be in the compressed rather than expanded format.
 
 The following commands are supported:
 

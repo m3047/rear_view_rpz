@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2022 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -295,9 +295,7 @@ class RearView(object):
     in the RPZ should be less than this although the exact number can vary.
     """
     
-    # TODO: Ip6 is not presently supported.
-    #DEFAULT_ADDRESS_RECORDS = { rdatatype.A, rdatatype.AAAA }
-    DEFAULT_ADDRESS_RECORDS = { rdatatype.A }
+    DEFAULT_ADDRESS_RECORDS = { rdatatype.A, rdatatype.AAAA }
     DEFAULT_CACHE_SIZE = 10000
     
     def __init__(self, event_loop, dns_server, rpz, statistics=None, cache_size=None,

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2022 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,9 +40,14 @@ from dns.exception import DNSException
 # version 1.x.
 from dns.update import Update as Updater
 
+from ipaddress import ip_address
+
 PRINT_COROUTINE_ENTRY_EXIT = None
 
 TTL = 600
+
+V4 = '.in-addr.arpa'
+V6 = '.ip6.arpa'
 
 class Connection(object):
     """Manages a queue of requests and replies."""
@@ -138,7 +143,8 @@ class ZoneContents(dict):
     The key is the name and the value is a ZoneEntry.
     """
     def update_entry(self, rname, rtype, rval):
-        rname = rname.split('.in-addr.arpa')[0] + '.in-addr.arpa'
+        mode = V4 in rname and V4 or V6
+        rname = rname.split(mode)[0] + mode
         if rname not in self:
             self[rname] = ZoneEntry( rname )
         self[rname].update(rtype, rval)
@@ -169,19 +175,34 @@ class TelemetryPackage(dict):
         
 def reverse_to_address(reverse_ref):
     """Take the reverse lookup qname format and extract the address."""
-    return '.'.join(reversed(reverse_ref.split('.in-addr.arpa')[0].split('.')))
+    if   V4 in reverse_ref:
+        return '.'.join(reversed(reverse_ref.split(V4)[0].split('.')))
+    elif V6 in reverse_ref:
+        a = reverse_ref.split(V6)[0].split('.')
+        a.reverse()
+        return str(
+            ip_address(
+                ':'.join((
+                    ''.join(a[i*4:i*4+4]) for i in range(8)
+                    ))
+                )
+            )
+    return ''
 
 def address_to_reverse(address):
-    """Take the address and construct the reverse lookup format."""
-    return '{}.in-addr.arpa'.format('.'.join(reversed(address.split('.'))))
+    """Take the address and construct the reverse lookup qname format."""
+    return ip_address(address).reverse_pointer          # works for 4 and 6
     
 class RPZ(object):
     
     RDTYPES = set((rdatatype.PTR, rdatatype.TXT))
+
     BYTE_REGEX = '(?:25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})'
     V4ADDR_REGEX = '[.]'.join((BYTE_REGEX,) * 4)
     REV4_RE = re.compile(V4ADDR_REGEX + '[.]in-addr[.]arpa', re.ASCII|re.IGNORECASE)
-    # TODO: Ip6 here
+    
+    V6ADDR_REGEX = '[.]'.join(['[0-9a-f]'] * 32)
+    REV6_RE = re.compile(V6ADDR_REGEX + '[.]ip6[.]arpa', re.ASCII|re.IGNORECASE)
     
     def __init__(self, event_loop, server, rpz, statistics, address_record_types, garbage_logger):
         self.event_loop = event_loop
@@ -230,9 +251,8 @@ class RPZ(object):
         
         This updates both the RPZ view and the telemetry view.
         """
-        if not (rdatatype.A in self.address_record_types
-            and self.REV4_RE.match(qname)
-            # TODO: Ip6 here.
+        if not ( (rdatatype.A in self.address_record_types and self.REV4_RE.match(qname))
+             or  (rdatatype.AAAA in self.address_record_types and self.REV6_RE.match(qname))
             ):
             if self.garbage_logger:
                 self.garbage_logger('unexpected qname {} in zonefile on load'.format(qname))

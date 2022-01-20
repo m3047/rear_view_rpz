@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2019-2021 by Fred Morris Tacoma WA
+# Copyright (c) 2019-2022 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ from rearview.db import RearView
 PRINT_COROUTINE_ENTRY_EXIT = None
 MAX_READ_SIZE = 1024
 CONTENT_TYPE = 'protobuf:dnstap.Dnstap'
-ADDRESS_CLASSES = { rdatatype.A }
+ADDRESS_CLASSES = { rdatatype.A, rdatatype.AAAA }
 GARBAGE_LOGGER = logging.warning
 
 if __name__ == "__main__":
