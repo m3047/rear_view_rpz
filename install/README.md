@@ -43,6 +43,20 @@ In the `options` section add the following, changing the name of the zone as app
      dnstap-output unix "/tmp/dnstap";
 ```
 
+###### Is Dnstap working?
+
+The simplest way that I know of to tell is to run `../../shodohflo/examples/dnstap2json.py` and it should spew (abbreviated)
+output to the console:
+
+```
+# ../../shodohflo/examples/dnstap2json.py /tmp/dnstap
+INFO:root:dnstap2json starting. Socket: /tmp/dnstap  Destination: STDOUT
+INFO:root:Accepting: protobuf:dnstap.Dnstap
+{"client": "10.0.0.224", "qtype": "AAAA", "status": "NOERROR", "chain": [["infoblox.com."], ["2620:12a:8001::3", "2620:12a:8000::3"]]}
+{"client": "10.0.0.224", "qtype": "A", "status": "NOERROR", "chain": [["www.worldtimeserver.com."], ["54.39.158.232"]]}
+{"client": "10.0.0.118", "qtype": "A", "status": "NOERROR", "chain": [["pool.ntp.org."], ["64.142.54.12", "208.67.72.50", "45.15.168.98", "137.190.2.4"]]}
+```
+
 #### Zone Declaration
 
 Add the following zone declaration, changing the name of the zone as appropriate:
