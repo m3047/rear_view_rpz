@@ -375,7 +375,7 @@ class RPZ(object):
         try:
             resp = dns.message.from_wire(wire_resp)
         except DNSException as e:
-            logging.error('Invalid DNS response to (delete {})'.format(address.address, ptr_value))
+            logging.error('Invalid DNS response to (delete {})'.format(qname))
             self.conn_.close()
             return
         
