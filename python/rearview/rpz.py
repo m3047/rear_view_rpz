@@ -372,7 +372,12 @@ class RPZ(object):
         
         wire_req = update.to_wire()
         wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
-        resp = dns.message.from_wire(wire_resp)
+        try:
+            resp = dns.message.from_wire(wire_resp)
+        except DNSException as e:
+            logging.error('Invalid DNS response to (delete {})'.format(address.address, ptr_value))
+            self.conn_.close()
+            return
         
         if resp.rcode() != rcode.NOERROR:
             self.global_error('delete', resp)
