@@ -203,4 +203,55 @@ class Heuristics(object):
         #"""Are queries increasing, decreasing, or remaining the same?"""
         #return res_obj.query_trend
 
+class CountingDict(dict):
+    """Counts the values of its keys."""
+    
+    def increment(self, k, i=1):
+        """Returns the incremented value."""
+        if k not in self:
+            self[k] = i
+            return
+        self[k] += i
+        return self[k]
 
+class CircularLogger(object):
+    """Part of internal instrumentation.
+    
+    Each entry in the logger is a CountingDict. The currently active logging
+    context can be accessed directly on the object. Note that increment() only
+    works if what's intended to be stored for that key is an integer!
+    
+    The log itself is the attribute log. The newest entry is at [-1]
+    and the oldest is at [0]
+    """
+    LIMIT = 10
+    def __init__(self, limit=LIMIT):
+        self.limit = limit
+        self.log = []
+        return
+    
+    def rotate(self):
+        """Rotate the log.
+        
+        The entry at [0] is deleted and a new CountingDict is appended to log.
+        """
+        if len(self.log) >= self.limit:
+            del self.log[0]
+        self.log.append(CountingDict())
+        self.log[-1].timestamp = time.time()
+        return
+    
+    def increment(self, k, i=1):
+        """self.log[-1].increment(k)"""
+        return self.log[-1].increment(k,i)
+    
+    def __getitem__(self, k):
+        return self.log[-1][k]
+    
+    def __setitem__(self, k, v):
+        self.log[-1][k] = v
+        return
+
+    def __len__(self):
+        return len(self.log)
+    
