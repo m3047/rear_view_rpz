@@ -29,7 +29,7 @@ from heapq import heappush, heappop
 
 import dns.rdatatype as rdatatype
 
-from . import Heuristics
+from . import Heuristics, CircularLogger
 from .heuristic import heuristic_func
 from .rpz import RPZ
 
@@ -49,7 +49,7 @@ class Address(object):
         
     def __lt__(self, other):
         return self.address < other.address
-        
+            
     def seen(self):
         self.last_seen = time()
         return
@@ -185,6 +185,7 @@ class Associator(object):
         self.cache = Deque()
         self.n_resolutions = 0
         self.addresses = {}
+        self.logger = CircularLogger()
         return
     
     def update_resolution(self, address, chain):
@@ -245,8 +246,12 @@ class Associator(object):
     
     def do_cache_eviction(self):
         """Performs the actual cache eviction on behalf of the coprocess."""
+        self.logger.rotate()
+        
         overage = self.n_resolutions - self.cache_size
-        target_pool_size = overage * self.EVICTION_POOL_MULTIPLIER + self.EVICTION_POOL_BASE_SIZE
+        target_pool_size = int(overage * self.EVICTION_POOL_MULTIPLIER + self.EVICTION_POOL_BASE_SIZE)
+        self.logger['overage'] = overage
+        self.logger['target_pool_size'] = target_pool_size
 
         addresses = []
         candidates = []
@@ -259,7 +264,9 @@ class Associator(object):
                 # Lowest heuristic scores will be preferred.
                 heappush(candidates, (heuristic_func(resolution), len(candidates), addresses[-1], resolution) )
             working_pool_size += len(addresses[-1].resolutions)
-                
+        self.logger['working_pool_size'] = working_pool_size
+        self.logger['candidates'] = candidates.copy()
+        
         affected_addresses = set()
         deleted_addresses = set()
         for i in range(overage):
@@ -274,11 +281,19 @@ class Associator(object):
         # enough to be trimmed, we don't rotate.
         if len(addresses) == 1 and len(addresses[0].resolutions) >= target_pool_size:
             self.cache.append(addresses[0])
+            self.logger['single_address'] = len(addresses[0].resolutions)
         else:
+            recycled = set()
             for address in addresses:
                 if address.address not in deleted_addresses:
+                    recycled.add(address.address)
                     self.cache.appendleft(address)
-            
+            self.logger['recycled_addresses'] = recycled
+
+        self.logger['affected_addresses'] = affected_addresses
+        self.logger['deleted_addresses'] = deleted_addresses
+        self.logger['n_addresses'] = len(addresses)
+        self.logger['n_resolutions'] = self.n_resolutions
         return affected_addresses
 
 class RearView(object):

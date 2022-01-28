@@ -75,6 +75,15 @@ Cache eviction queue
 Display information about the entries (addresses) at the beginning (<)
 or end (>) of the queue. The specified number of entries is displayed.
 
+Cache Evictions
+---------------
+
+    evict{ions} <number>
+    
+Displays a logic readout of the most recent "n" cache evictions. There is
+an internal limit on the number of evictions which are retained for
+review.
+
 Quit
 ----
 
@@ -93,6 +102,7 @@ Each response line is prepended by one of these codes and an ASCII space.
     400 User error / bad request.
     500 Not found or internal error.
 """
+import time
 import logging
 import asyncio
 from dns.resolver import Resolver
@@ -106,7 +116,8 @@ class Request(object):
     to do.
     """
 
-    COMMANDS = dict(a2z=1, address=2, entry=2, qd=1, cache=3, quit=1)
+    COMMANDS = dict(a2z=1, address=2, entry=2, qd=1, cache=3, evictions=2, quit=1)
+    ABBREVIATED = { k for k in COMMANDS.keys() if len(k) > 4 }
 
     def __init__(self, message, dnstap):
         self.rear_view = dnstap.rear_view
@@ -120,8 +131,10 @@ class Request(object):
     
     def validate_request(self, request):
         verb = request[0].lower()
-        if len(verb) >= 4 and 'address'.startswith(verb):
-            verb = request[0] = 'address'
+        if len(verb) >= 4:
+            for v in self.ABBREVIATED:
+                if v.startswith(verb):
+                    verb = request[0] = v
         if verb not in self.COMMANDS:
             return 'unrecognized command'
         if len(request) != self.COMMANDS[verb]:
@@ -309,6 +322,75 @@ class Request(object):
             )
             i += inc
             n_addrs -= 1
+            
+        return 200, response
+    
+    def evictions(self, request):
+        """evictions <number>"""
+        try:
+            n_evicts = int(request[1])
+            if n_evicts < 1:
+                raise ValueError
+        except:
+            return self.bad_request('expected a positive integer value')
+
+        logger = self.rear_view.associations.logger
+        response = []
+        
+        if n_evicts > len(logger):
+            n_evicts = len(logger)
+        
+        base = n_evicts * -1
+        for n in range(n_evicts):
+            entry = logger.log[base + n]
+            
+            response.append('** {:0.3f} **'.format(entry.timestamp - time.time()))
+            
+            response.append(
+                'Resolutions:'
+            )
+            response.append(
+                '     Overage:{:>6d}      Target:{:>6d}      Working:{:>6d}      N After:{:>6d}'.format(
+                    *[entry[k] for k in 'overage target_pool_size working_pool_size n_resolutions'.split()]
+                )
+            )
+            response.append(
+                'Addresses:'
+            )
+            n_addresses = entry['n_addresses']
+            response.append(
+                '    Selected:{:>6d}  {:>10s}:{:>6d}      Affected:{:>6d}     Deleted:{:>6d}'.format(
+                    n_addresses,
+                    (n_addresses > 1 and 'Recycled' or 'Single'),
+                    (n_addresses > 1 and len(entry['recycled_addresses']) or entry['single_address']),
+                    len(entry['affected_addresses']), len(entry['deleted_addresses'])
+                )
+            )
+            response.append(
+                'Affected:'
+            )
+            response += ['    {}'.format(k) for k in sorted(entry['affected_addresses'])]
+            response.append(
+                'Deleted:'
+            )
+            response += ['    {}'.format(k) for k in sorted(entry['deleted_addresses'])]
+
+            if n_addresses > 1:
+                response.append(
+                    'Recycled:'
+                )
+                response += ['    {}'.format(k) for k in sorted(entry['recycled_addresses'])]
+            
+            response.append(
+                'Candidates:'
+            )
+            for candidate in sorted(entry['candidates']):
+                response.append(
+                    '    {:>8.1f}    {:>3d}   {}'.format(candidate[0], candidate[1], candidate[2].address)
+                )
+                response.append(
+                    '          {}'.format(candidate[3].chain)
+                )
             
         return 200, response
     
