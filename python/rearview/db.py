@@ -42,6 +42,7 @@ class Address(object):
         self.resolutions = {}
         self.last_seen = time()
         self.best_resolution = None
+        self.best_score = 0.0
         return
     
     def __eq__(self, other):
@@ -112,6 +113,7 @@ class Address(object):
         """Delete the resolution, returning True if no more resolutions remain."""
         del self.resolutions[resolution.chain]
         self.best_resolution = None
+        self.best_score = 0.0
         return not self.resolutions
     
     def match(self, ptr):
@@ -196,18 +198,21 @@ class Associator(object):
         address = self.addresses[address]
         address.seen()
 
-        added = False
         if chain not in address.resolutions:
             if address.add_resolution(chain):
-                added = True
                 self.n_resolutions += 1
                 if self.n_resolutions > self.cache_size:
                     self.cache_eviction()
-        if not added:
-            resolution = address.resolutions[chain]
-            resolution.seen()
+                return True
 
-        return added
+        resolution = address.resolutions[chain]
+        resolution.seen()
+        
+        if address.best_resolution and address.best_resolution.chain != chain:
+            if heuristic_func(resolution) > address.best_score:
+                return True
+
+        return False
     
     def update_resolution_from_rpz(self, address, data):
         """Updates the resolution for an address based on info from the RPZ.
@@ -355,18 +360,19 @@ class RearView(object):
         score, resolution = heappop(resolutions)
         score *= -1
 
+        # NOTE: This would be the place to do some sort of need-based refresh of the
+        #       zonefile metadata driven by events. To get here, we already passed the
+        #       test in associations.update_resolution() which replaces the reloaded
+        #       chain and so reload_score should be None.
         need_update = (
-             ( address.best_resolution is None
-            or address.best_resolution.chain != resolution.chain
-             )
-          or ( address.best_resolution.reload_score is not None
-           and score >= address.best_resolution.reload_score
-             )
+                address.best_resolution is None
+            or  address.best_resolution.chain != resolution.chain
         )
           
         if need_update:
             if resolution is not None:
                 address.best_resolution = resolution
+                address.best_score = score
             else:
                 need_update = False
                 logging.error(
