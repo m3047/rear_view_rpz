@@ -410,11 +410,9 @@ class RPZ(object):
         qname = address_to_reverse(address.address)
         ptr_value = address.best_resolution.chain[-1].rstrip('.') + '.'
         zone_entry = self.contents.get(qname)
-        if (  zone_entry is not None
-          and zone_entry.ptr is not None
-          and ptr_value == zone_entry.ptr
-           ):
-            return
+        # NOTE: There was some logic here to not do the update unless the actual
+        #       PTR association had changed or some period of time had elapsed.
+        #       But this is really a duplication of effort in db.RearView.solve_()
         
         self.contents.update_entry(qname, rdatatype.PTR, ptr_value)
 
