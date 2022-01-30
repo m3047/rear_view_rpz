@@ -133,10 +133,6 @@ class ZoneEntry(object):
             self.last_refresh = time()
         return
     
-    def needs_refresh(self):
-        """Returns True if the TXT record needs to be refreshed."""
-        return time() - self.last_refresh > self.TXT_RECORD_REFRESH_MINUTES
-    
 class ZoneContents(dict):
     """This is a dictionary of zone entries.
     
@@ -417,7 +413,6 @@ class RPZ(object):
         if (  zone_entry is not None
           and zone_entry.ptr is not None
           and ptr_value == zone_entry.ptr
-          and not zone_entry.needs_refresh()
            ):
             return
         
