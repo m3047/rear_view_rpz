@@ -1,3 +1,4 @@
+```
 Help on module rearview.console in rearview:
 
 NAME
@@ -205,4 +206,4 @@ CLASSES
 FILE
     /home/m3047/GitHub/rear_view_rpz/python/rearview/console.py
 
-
+```

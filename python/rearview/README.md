@@ -44,7 +44,8 @@ has available to it. Otherwise I welcome an additional doc, feel free to submit 
 
 After that, download [KNIME](https://www.knime.com/) and load the [Rear View workflow](https://github.com/m3047/rear_view_rpz/blob/main/utilities/Rear_View-knime-workspace.tgz).
 
-So now let's talk about the console. **NOTE:** The console has relatively extensive documentation, see `pydoc3 rearview.console`.
+So now let's talk about the console. **NOTE:** The console has relatively extensive documentation, see `pydoc3 rearview.console`
+([console.md](console.md) in this directory).
 
 ##### `a2z`
 
@@ -120,7 +121,7 @@ Various statistics are shown, although some may not be available until the batch
 Accumulating:
 
 * **Add Calls** the number of times attempts were made (typically one per eviction) to add to the batch.
-* **Total to Process** the number of addresses which have been available to add to the batch. This is capped at `BATCH_UPDATE_SIZE`.
+* **Total to Process** the number of addresses which have been available to add to the batch. The actual batch size is capped at `BATCH_UPDATE_SIZE`; this number may be larger than that, reflecting the total number prior to capping.
 
 Writing:
 
