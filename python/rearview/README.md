@@ -44,7 +44,8 @@ has available to it. Otherwise I welcome an additional doc, feel free to submit 
 
 After that, download [KNIME](https://www.knime.com/) and load the [Rear View workflow](https://github.com/m3047/rear_view_rpz/blob/main/utilities/Rear_View-knime-workspace.tgz).
 
-So now let's talk about the console. **NOTE:** The console has relatively extensive documentation, see `pydoc3 rearview.console`.
+So now let's talk about the console. **NOTE:** The console has relatively extensive documentation, see `pydoc3 rearview.console`
+([console.md](console.md) in this directory).
 
 ##### `a2z`
 
