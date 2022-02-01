@@ -84,6 +84,22 @@ Displays a logic readout of the most recent "n" cache evictions. There is
 an internal limit on the number of evictions which are retained for
 review.
 
+Zone Data Refresh
+-----------------
+
+    refr{esh} <number>
+
+Displays a logic readout of the most recent "n" zone refresh batches. Resolutions
+which survive "sheep shearing" (cache eviction) are scheduled for having updated
+information written back to the zone file in batches to minimize performance impacts;
+if things are really busy everything may not get refreshed.
+
+Batches go through three phases, at least for logging purposes:
+
+1) The batch is created.
+2) The batch is accumulating addresses to update with fresh information.
+3) The batch is written to the zone as an update.
+
 Quit
 ----
 
@@ -116,7 +132,7 @@ class Request(object):
     to do.
     """
 
-    COMMANDS = dict(a2z=1, address=2, entry=2, qd=1, cache=3, evictions=2, quit=1)
+    COMMANDS = dict(a2z=1, address=2, entry=2, qd=1, cache=3, evictions=2, refresh=2, quit=1)
     ABBREVIATED = { k for k in COMMANDS.keys() if len(k) > 4 }
 
     def __init__(self, message, dnstap):
@@ -394,6 +410,63 @@ class Request(object):
             
         return 200, response
     
+    def refresh(self, request):
+        """refresh <number>"""
+        try:
+            n_updates = int(request[1])
+            if n_updates < 1:
+                raise ValueError
+        except:
+            return self.bad_request('expected a positive integer value')
+
+        logger = self.rear_view.rpz.batch_logger
+        response = []
+        
+        if n_updates > len(logger):
+            n_updates = len(logger)
+        
+        
+        base = n_updates * -1
+        for n in range(n_updates):
+            # NOTE: The state will determine what can be displayed, and in turn is determined
+            #       by the keys which are available if you read rpz.BatchLogger.
+            entry = logger.log[base + n]
+            state = logger.state(base + n)
+            
+
+            response.append('** {:0.3f} {} **'.format(entry.timestamp - time.time(), state.upper()))
+
+            if logger.STATE[state] <= logger.STATE['accumulating']:
+                batch_size = (
+                    logger.STATE[state] <= logger.STATE['complete']
+                    and 'Batch Size:{:>4d}'.format(entry['batch_size'])
+                    or  ''
+                )
+                response.append(
+                    'Add Calls:{:>4d}    Total to Process:{:>4d}    {}'.format(
+                        entry['add_calls'], entry['to_process'], batch_size
+                    )
+                )
+            if logger.STATE[state] <= logger.STATE['complete']:
+                response.append(
+                    'RCode:{:>3d}      Wire Size Request:{:>5d}   Response:{:>4d}'.format(
+                        entry['update_rcode'], entry['wire_req_bytes'], entry['wire_resp_bytes']
+                    )
+                )
+            if logger.STATE[state] <= logger.STATE['writing']:
+                processing = (
+                    logger.STATE[state] <= logger.STATE['complete']
+                    and 'Processing:{:>0.3f}'.format(entry['completion_timestamp']-entry['threshold_timestamp'])
+                    or ''
+                )
+                response.append(
+                    'Elapsed   Accumulating:{:>0.3f}  {}'.format(
+                        entry['threshold_timestamp'] - entry.timestamp, processing
+                    )
+                )
+            
+        return 200, response
+                
     def quit(self, request):
         """quit"""
         self.quit_session = True

@@ -190,6 +190,13 @@ class Associator(object):
         self.logger = CircularLogger()
         return
     
+    def address_objects(self, addresses):
+        """Genfunc for Address objects from the Associator given a list of addresses."""
+        for address in addresses:
+            if address in self.addresses:
+                yield self.addresses[address]
+        return
+    
     def update_resolution(self, address, chain):
         """Adds an address and the resolution, implicitly updating some counters."""
         if address not in self.addresses:
@@ -246,6 +253,7 @@ class Associator(object):
         resolution.query_count = data['count']
         resolution.query_trend = data['trend']
         resolution.reload_score = data['score']
+        # Omits optional elements such as update.
 
         return
     
@@ -284,11 +292,11 @@ class Associator(object):
             
         # If there was only one address in the candidate pool and it still has more than
         # enough to be trimmed, we don't rotate.
+        recycled = set()
         if len(addresses) == 1 and len(addresses[0].resolutions) >= target_pool_size:
             self.cache.append(addresses[0])
             self.logger['single_address'] = len(addresses[0].resolutions)
         else:
-            recycled = set()
             for address in addresses:
                 if address.address not in deleted_addresses:
                     recycled.add(address.address)
@@ -299,7 +307,8 @@ class Associator(object):
         self.logger['deleted_addresses'] = deleted_addresses
         self.logger['n_addresses'] = len(addresses)
         self.logger['n_resolutions'] = self.n_resolutions
-        return affected_addresses
+        
+        return affected_addresses, recycled
 
 class RearView(object):
     """This is the database-like interface.
@@ -414,10 +423,18 @@ class RearView(object):
             PRINT_COROUTINE_ENTRY_EXIT('> db.RearView.do_cache_eviction()')
 
         try:
-            for address in self.associations.do_cache_eviction():
+            affected, recycled = self.associations.do_cache_eviction()
+            for address in affected:
                 self.solver_queue.put_nowait(
                     self.solve(address, self.solve_stats and self.solve_stats.start_timer() or None)
                 )
+            # Anything which was kept in the cache but not otherwise affected gets potentially added
+            # to the next batch refresh.
+            self.rpz.add_to_batch_refresh([
+                        ( address, heuristic_func(address.best_resolution) )
+                        for address in self.associations.address_objects(recycled - affected)
+                        if address.best_resolution is not None
+                    ])
             self.cache_eviction_scheduled = False
         except Exception as e:
             traceback.print_exc()

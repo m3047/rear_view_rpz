@@ -322,9 +322,12 @@ class TestAssociatorEviction(TestCase):
         mock_cache_eviction.assert_called()
         self.assertEqual(len(associator.cache), self.CACHE_SIZE + 10)
 
-        addresses = associator.do_cache_eviction()
+        addresses,recycled = associator.do_cache_eviction()
+        
         self.assertEqual(len(associator.cache), self.CACHE_SIZE)
         self.assertEqual(len(addresses), 10)
+        self.assertEqual(len(recycled), 12)
+        self.assertEqual(len(recycled & addresses), 0)  # no common elements
         self.assertEqual(associator.n_resolutions, self.CACHE_SIZE)
         
         return
@@ -345,9 +348,11 @@ class TestAssociatorEviction(TestCase):
         self.assertEqual(len(associator.addresses[self.BASE_ADDRESS].resolutions), self.CACHE_SIZE)
         self.assertEqual(len(associator.cache), 11)
 
-        addresses = associator.do_cache_eviction()
-
+        addresses,recycled = associator.do_cache_eviction()
+        
         self.assertEqual(len(addresses), 6)
+        self.assertEqual(len(recycled), 1)
+        self.assertEqual(len(recycled & addresses), 1)
         self.assertEqual(len(associator.cache), 6)
         self.assertEqual(associator.n_resolutions, self.CACHE_SIZE)
         self.assertEqual(len(associator.addresses[self.BASE_ADDRESS].resolutions), self.CACHE_SIZE - 5)
@@ -367,9 +372,9 @@ class TestAssociatorEviction(TestCase):
         self.assertEqual(len(associator.addresses[self.BASE_ADDRESS].resolutions), self.CACHE_SIZE)
         self.assertEqual(len(associator.cache), 3)
 
-        addresses = associator.do_cache_eviction()
-
+        addresses,recycled = associator.do_cache_eviction()
         self.assertEqual(len(addresses), 1)
+        self.assertEqual(len(recycled), 0)
         self.assertEqual(len(associator.cache), 3)
         self.assertEqual(associator.n_resolutions, self.CACHE_SIZE)
         self.assertEqual(len(associator.addresses[self.BASE_ADDRESS].resolutions), self.CACHE_SIZE - 2)

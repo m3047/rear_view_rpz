@@ -42,6 +42,8 @@ from dns.update import Update as Updater
 
 from ipaddress import ip_address
 
+from . import CircularLogger
+
 PRINT_COROUTINE_ENTRY_EXIT = None
 
 TTL = 600
@@ -158,9 +160,11 @@ class TelemetryPackage(dict):
         last = lambda x:float(x),
         count = lambda x:int(x),
         trend = lambda x:float(x),
-        score = lambda x:float(x)
+        score = lambda x:float(x),
+        update = lambda x:float(x)
     )
-    COMPLETE = set(CONVERSIONS.keys())
+    OPTIONAL = { 'update' }
+    COMPLETE = set(CONVERSIONS.keys()) - OPTIONAL
 
     def complete(self):
         return self.COMPLETE <= set(self.keys())
@@ -188,6 +192,47 @@ def reverse_to_address(reverse_ref):
 def address_to_reverse(address):
     """Take the address and construct the reverse lookup qname format."""
     return ip_address(address).reverse_pointer          # works for 4 and 6
+
+class AddressDict(dict):
+    """Subclass which understands db.Address.
+    
+    Keys in the dictionary are the actual addresses, which
+    are extracted from the supplied db.Address tuples which become the
+    stored values.
+    """
+    def add(self, db_address, *args):
+        """Add / update the record for the specified address.
+        
+        The first argument is the db.Address, any additional args are
+        appended to the tuple.
+        """
+        self[db_address.address] = (db_address, *args)
+        return
+    
+class BatchLogger(CircularLogger):
+    """A type of logger which understands the state of a given entry.
+    
+    An entry is a CountingDictionary. The state of the entry can be
+    determined by the keys which are present.
+    """
+    STATES = (
+        ( 'complete', lambda log:     'completion_timestamp' in log ),
+        ( 'writing',  lambda log:     'threshold_timestamp' in log ),
+        ( 'accumulating', lambda log: 'add_calls' in log),
+        ( 'new',      lambda log:     True)
+    )
+    
+    STATE = { state[0]:i for i,state in enumerate(STATES) }
+    
+    def state(self, i=-1):
+        """Return the processing state of logger i.
+        
+        The "most recent" logger is -1.
+        """
+        log = self.log[i]
+        for s in self.STATES:
+            if s[1](log):
+                return s[0]
     
 class RPZ(object):
     
@@ -200,6 +245,10 @@ class RPZ(object):
     V6ADDR_REGEX = '[.]'.join(['[0-9a-f]'] * 32)
     REV6_RE = re.compile(V6ADDR_REGEX + '[.]ip6[.]arpa', re.ASCII|re.IGNORECASE)
     
+    BATCH_UPDATE_FREQUENCY = 30
+    BATCH_UPDATE_SIZE = 30
+    BATCH_THRESHOLD = 0.5
+    
     def __init__(self, event_loop, server, rpz, statistics, address_record_types, garbage_logger):
         self.event_loop = event_loop
         self.server = server
@@ -210,12 +259,16 @@ class RPZ(object):
         self.processor_ = self.event_loop.create_task(self.queue_processor())
         self.conn_ = Connection(event_loop, server, rpz, statistics)
         self.contents = ZoneContents()
+        self.batch_update_queue = AddressDict()
+        self.batch_monitor_ = self.event_loop.create_task(self.batch_update_monitor())
+        self.batch_logger = BatchLogger().rotate()
         if statistics:
             self.axfr_stats = statistics.Collector("rpz axfr")
             self.delete_stats = statistics.Collector("rpz delete")
             self.update_stats = statistics.Collector("rpz update")
+            self.batch_stats = statistics.Collector("rpz refresh")
         else:
-            self.axfr_stats = self.delete_stats = self.update_stats = None
+            self.axfr_stats = self.delete_stats = self.update_stats = self.batch_stats = None
         return
     
     async def close(self):
@@ -226,7 +279,9 @@ class RPZ(object):
         self.conn_.close()
 
         self.processor_.cancel()
+        self.batch_monitor_.cancel()
         await self.processor_
+        await self.batch_monitor_
 
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('< rpz.RPZ.close()')
@@ -254,7 +309,7 @@ class RPZ(object):
                 self.garbage_logger('unexpected qname {} in zonefile on load'.format(qname))
             return
         
-        self.contents.update_entry(qname, rtype, rval)
+        self.contents.update_entry(qname, rtype, rval)  # No-op unless rtype == PTR
 
         # For telemetry updates, wait until we have all of the info for an update.
         if qname not in self.telemetry_data_cache:
@@ -396,20 +451,22 @@ class RPZ(object):
             PRINT_COROUTINE_ENTRY_EXIT('< rpz.RPZ.delete()')
         return
 
-    async def update_(self, address, score):
-        """Internal method."""
-        # Get the expected resolution. When this is called by RearView.solve() the
-        # best resolution has been determined.
+    def prepare_update(self, update, address, score):
+        """Adds updates for an address to a dns.update.Update.
+
+        Any updates are added to the Update object.
+        
+        Returns True if there is an update to be performed.
+        """
         if not address.best_resolution:
             logging.error(
                 'update_(): best_resolution is None for address:{} with resolutions:{}'.format(
                     address.address, [ k for k in address.resolutions.keys() ]
                 )
             )
-            return
+            return False
         qname = address_to_reverse(address.address)
         ptr_value = address.best_resolution.chain[-1].rstrip('.') + '.'
-        zone_entry = self.contents.get(qname)
         # NOTE: There was some logic here to not do the update unless the actual
         #       PTR association had changed or some period of time had elapsed.
         #       But this is really a duplication of effort in db.RearView.solve_()
@@ -417,7 +474,6 @@ class RPZ(object):
         self.contents.update_entry(qname, rdatatype.PTR, ptr_value)
 
         qname = qname + '.'  + self.rpz
-        update = Updater(self.rpz)
         update.delete(qname)
         update.add(qname, TTL, rdatatype.PTR, ptr_value)
         update.add(qname, TTL, rdatatype.TXT,
@@ -429,10 +485,17 @@ class RPZ(object):
                   ('last',  address.best_resolution.last_seen),
                   ('count', address.best_resolution.query_count),
                   ('trend', address.best_resolution.query_trend),
+                  ('update', time()),
                   ('score', score)
                 )
             ))
         )
+        return True
+        
+    async def update_(self, address, score):
+        """Internal method."""
+        update = Updater(self.rpz)
+        self.prepare_update(update, address, score)
         
         wire_req = update.to_wire()
         wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
@@ -463,6 +526,77 @@ class RPZ(object):
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('< rpz.RPZ.update()')
         return
+    
+    def add_to_batch_refresh(self, to_process ):
+        """Add address, score tuples to the batch if there's room.
+        
+        Batch TXT record updates are controlled by the variables
+          * BATCH_UPDATE_FREQUENCY
+          * BATCH_UPDATE_SIZE
+          * BATCH_THRESHOLD
+        """
+        self.batch_logger.increment('add_calls')
+        self.batch_logger.increment('to_process', len(to_process))
+        bq = self.batch_update_queue
+        for address, score in to_process:
+            if len(bq) >= self.BATCH_UPDATE_SIZE:
+                break
+            bq.add(address, score)
+        return
+
+    async def batch_update(self, to_process, timer, logger):
+        """Performs a batch refresh of TXT records."""
+        if PRINT_COROUTINE_ENTRY_EXIT:
+            PRINT_COROUTINE_ENTRY_EXIT('> rpz.RPZ.batch_update()')
+
+        update = Updater(self.rpz)
+        for address, score in to_process.values():
+            self.prepare_update(update, address, score)
+        logger['batch_size'] = len(to_process)
+        
+        wire_req = update.to_wire()
+        wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
+        logger['wire_req_bytes'] = len(wire_req)
+        logger['wire_resp_bytes'] = len(wire_resp)
+        try:
+            resp = dns.message.from_wire(wire_resp)
+            logger['update_rcode'] = resp.rcode()
+            if resp.rcode() != rcode.NOERROR:
+                self.global_error('batch_update', resp)
+        except DNSException as e:
+            logger['update_rcode'] = -1
+            logging.error('Invalid DNS response to batch update')
+            self.conn_.close()
+        
+        logger['completion_timestamp'] = time()
+        if self.batch_stats:
+            timer.stop()
+        if PRINT_COROUTINE_ENTRY_EXIT:
+            PRINT_COROUTINE_ENTRY_EXIT('< rpz.RPZ.batch_update()')
+        return
+    
+    async def batch_update_monitor(self):
+        """Performs periodic batch refresh / updates of TXT records."""
+        if PRINT_COROUTINE_ENTRY_EXIT:
+            PRINT_COROUTINE_ENTRY_EXIT('> rpz.RPZ.batch_update_monitor()')
+
+        while True:
+            await asyncio.sleep(self.BATCH_UPDATE_FREQUENCY)
+            to_process = self.batch_update_queue
+            if len(to_process) < (self.BATCH_UPDATE_SIZE * self.BATCH_THRESHOLD):
+                continue
+            self.batch_logger['threshold_timestamp'] = time()
+            self.batch_update_queue = AddressDict()
+            # We want to keep using the "current" logger during batch processing even though
+            # we're rotating it since outside of this coroutine we've started another.
+            logger = self.batch_logger.log[-1]
+            self.batch_logger.rotate()
+            self.create_task(self.batch_update( to_process, self.timer('batch_stats'), logger ))
+            
+        # This routine never exits.
+        if PRINT_COROUTINE_ENTRY_EXIT:
+            PRINT_COROUTINE_ENTRY_EXIT('< rpz.RPZ.batch_update_monitor()')
+        return        
         
     async def queue_processor(self):
         """Processes the task queue, in coordination with the Connection."""
