@@ -121,7 +121,7 @@ Various statistics are shown, although some may not be available until the batch
 Accumulating:
 
 * **Add Calls** the number of times attempts were made (typically one per eviction) to add to the batch.
-* **Total to Process** the number of addresses which have been available to add to the batch. This is capped at `BATCH_UPDATE_SIZE`.
+* **Total to Process** the number of addresses which have been available to add to the batch. The actual batch size is capped at `BATCH_UPDATE_SIZE`; this number may be larger than that, reflecting the total number prior to capping.
 
 Writing:
 
