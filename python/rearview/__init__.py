@@ -233,13 +233,15 @@ class CircularLogger(object):
     def rotate(self):
         """Rotate the log.
         
+        FLUENT: returns the object.
+        
         The entry at [0] is deleted and a new CountingDict is appended to log.
         """
         if len(self.log) >= self.limit:
             del self.log[0]
         self.log.append(CountingDict())
         self.log[-1].timestamp = time.time()
-        return
+        return self
     
     def increment(self, k, i=1):
         """self.log[-1].increment(k)"""
