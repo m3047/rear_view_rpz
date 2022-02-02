@@ -1,6 +1,6 @@
 # Rear View RPZ
 
-___status: basically good to go, I expect it to work if you satisfy the prerequisites. tested with python 3.6 & 3.8; dnspython 1.15 & 2.1; bind 9.12.3 & 9.16.23___
+___status: good to go with no backlog items. I expect it to work if you satisfy the prerequisites. tested with python 3.6 & 3.8; dnspython 1.15 & 2.1; bind 9.12.3 & 9.16.23___
 
 Turn your recursive DNS (BIND) server into a network investigation enabler with _DnsTap_ and _Response Policy Zones!_
 
