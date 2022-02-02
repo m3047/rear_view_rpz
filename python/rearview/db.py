@@ -424,17 +424,31 @@ class RearView(object):
 
         try:
             affected, recycled = self.associations.do_cache_eviction()
+            batch = []
+            logger = self.rpz.batch_logger
+            # We are making an assumption that recycled is "clean" but maybe that's incorrect
+            # and shearing is leaving us with mangled sheep?
+            logger.increment('recycled', len(recycled))
+            for candidate in self.associations.address_objects(recycled - affected):
+                if not candidate.resolutions:
+                    logger.increment('recycled_no_resolutions')
+                    affected.add(candidate.address)
+                    continue
+                if candidate.best_resolution is None:
+                    logger.increment('recycled_no_best_resolution')
+                    affected.add(candidate.address)
+                    continue
+                logger.increment('recycled_good')
+                batch.append( (candidate, heuristic_func(candidate.best_resolution)) )
+                
             for address in affected:
                 self.solver_queue.put_nowait(
                     self.solve(address, self.solve_stats and self.solve_stats.start_timer() or None)
                 )
             # Anything which was kept in the cache but not otherwise affected gets potentially added
             # to the next batch refresh.
-            self.rpz.add_to_batch_refresh([
-                        ( address, heuristic_func(address.best_resolution) )
-                        for address in self.associations.address_objects(recycled - affected)
-                        if address.best_resolution is not None
-                    ])
+            self.rpz.add_to_batch_refresh(batch)
+            
             self.cache_eviction_scheduled = False
         except Exception as e:
             traceback.print_exc()

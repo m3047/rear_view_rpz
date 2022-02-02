@@ -447,6 +447,19 @@ class Request(object):
                         entry['add_calls'], entry['to_process'], batch_size
                     )
                 )
+                good = entry.get('recycled_good', 0)
+                no_best = entry.get('recycled_no_best_resolution', 0)
+                no_resolutions = entry.get('recycled_no_resolutions', 0)
+                # TODO: This is looking for mangled sheep. It can be removed at some point
+                #       in the future when nobody remembers what this is about.
+                if (good + no_best + no_resolutions) != entry.get('recycled', 0):
+                    response.append('Sheep are disappearing! (hopefully nobody sees this)')
+                #
+                response.append(
+                    'Recycled   Good:{:>4d}   No Best:{:>4d}  No Resolutions:{:>4d}'.format(
+                        good, no_best, no_resolutions
+                    )
+                )
             if logger.STATE[state] <= logger.STATE['complete']:
                 response.append(
                     'RCode:{:>3d}      Wire Size Request:{:>5d}   Response:{:>4d}'.format(
