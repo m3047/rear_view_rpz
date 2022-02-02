@@ -308,7 +308,7 @@ class Associator(object):
         self.logger['n_addresses'] = len(addresses)
         self.logger['n_resolutions'] = self.n_resolutions
         
-        return affected_addresses, recycled
+        return affected_addresses.copy(), recycled.copy()
 
 class RearView(object):
     """This is the database-like interface.
