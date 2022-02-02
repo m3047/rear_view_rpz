@@ -428,8 +428,9 @@ class RearView(object):
             logger = self.rpz.batch_logger
             # We are making an assumption that recycled is "clean" but maybe that's incorrect
             # and shearing is leaving us with mangled sheep?
+            recycled -= affected
             logger.increment('recycled', len(recycled))
-            for candidate in self.associations.address_objects(recycled - affected):
+            for candidate in self.associations.address_objects(recycled):
                 if not candidate.resolutions:
                     logger.increment('recycled_no_resolutions')
                     affected.add(candidate.address)
