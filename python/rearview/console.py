@@ -57,7 +57,6 @@ of cryptic legends and numbers. Those are:
 * qt query trend
 * h  heuristic or score
 
-
 Zone details
 ------------
 
