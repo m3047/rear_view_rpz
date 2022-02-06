@@ -145,7 +145,7 @@ The core functional purpose of the heuristic is to answer:
 * Given multiple possible names resolving to an address, which one do I choose to display?
 
 To do so, the simple rule of thumb (all other things being equal) to me seems to be _the longest CNAME chain ending
-in the FQDN with the least number of labels_ works for me. I claim experience. ;-)
+in the FQDN with the least number of labels_. I claim experience. ;-)
 
 A secondary purpose turns out to be:
 
