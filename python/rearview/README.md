@@ -134,3 +134,81 @@ Completed:
 * **Wire Size ...** over-the-wire request and response sizes.
 * **Elapsed Processing** the number of seconds which were spent actually updating the zone (writing).
 
+## The Thoughtful Attenuator
+
+This is more or less the followon screed to the foregoing one, reviewing the objectives of the heuristic
+and its components. It ends with a discussion of the _attenuator_ which was alluded to as a missing piece
+previously.
+
+The core functional purpose of the heuristic is to answer:
+
+* Given multiple possible names resolving to an address, which one do I choose to display?
+
+To do so, the simple rule of thumb (all other things being equal) to me seems to be _the longest CNAME chain ending
+in the FQDN with the least number of labels_. I claim experience. ;-)
+
+A secondary purpose turns out to be:
+
+* Which entries should I evict from cache?
+
+which hints at the need for something based on time or usage. Once you start thinking about it though,
+that doesn't sound like a risible goal for the heuristic in terms of the primary objective either.
+
+Cutting to the chase, we get the general outline of a formula:
+
+    depth_of_chain / number_of_labels + boost(time,usage) / attenuator
+    
+My first instinct was to boost based on time since first seen but as a thought experiment: how much traffic would
+a different FQDN need to get for you to want to see it instead? Based on that I tried simply ln(query_count)
+and it seems to work well enough... except for a few which get 10s or 100s of thousands of queries. (Although none
+of those have gone dark, they just keep going!)
+
+    depth_of_chain / number_of_labels + ln(query_count) / attenuator
+
+
+So what to do about the attenuator? I've been computing a query_trend:
+
+    T1 = 0.9*T0 + 0.1*last_seen
+    
+which eventually converges to the mean or linear query rate:
+
+    T --> first_seen / query_count
+    
+assuming that the query rate is linear, of course. It's not, which is why I'm using that trend computation which
+tends to give more importance to recent events (I'm using a coefficient of **0.1**). That was a hunch, again
+I blame experience. Various other things were explored dividing the query count by various time periods before
+or after taking the logarithm. Eventually I settled on
+
+    depth_of_chain / number_of_labels + ln(query_count) / (1 + query_trend)
+    
+as the most promising. The next thing I tried was to address a deficiency in the software computation, which is that
+query_trend is only updated when a new query occurs:
+
+    depth_of_chain / number_of_labels + ln(query_count) / (1 + 0.9*query_trend + 0.1*last_seen)
+    
+That looked better. I could even steer it over a "cliff" (345600 is the number of seconds in four days):
+
+    1 + ( (0.9*query_trend + 0.1*last_seen) / 34560 )^2
+    
+So why do I use 1/10 of 345600 there? That's because I want the cliff to be in four days, but I'm only adding 1/10 of
+the time when updating the query trend ergo 34560. But that does mean that if something _averages_ 9.6 hours, or
+in other words approaches that linear mean, that it will suffer unfairly. At this point I've gotta say, I don't
+see much impact. However, I think there is one better evolution (172800 is the number of seconds in two days):
+
+    1 + ( sqrt(query_trend^2 + last_seen^2) / 172800 ) ^ 2
+
+in other words:
+
+    depth_of_chain / number_of_labels + ln(query_count) / (1 + ( sqrt(query_trend^2 + last_seen^2) / 172800 ) ^ 2)
+    
+Yes I am sacrificing somewhat on the position of the cliff, to keep the attenuation at 1/16 at 8 days; I suppose I could
+raise it to a higher power than 2 to make the cliff steeper, that would be another option.
+
+
+So anyway that's what I'm recommending now.
+
+This seems to suit the basic maxim (long chains and short fqdns), while boosting results seen a lot. After several
+days of inactivity the boost is increasingly attenuated (down to 1/16th after 8 days).
+
+Eventually the boost is essentially gone, however if the same result is seen again it will be "remembered" and boosted
+much more quickly.

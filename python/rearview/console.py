@@ -48,7 +48,14 @@ Address details
     addr{ess} <some-address>
     
 Get details regarding an address' resolutions and best resolution, and
-whether this is reflected in the zone construct.
+whether this is reflected in the zone construct. The final line has a bunch
+of cryptic legends and numbers. Those are:
+
+* fs first seen delta from now (seconds)
+* ls last seen delta from now (seconds)
+* qc query count
+* qt query trend
+* h  heuristic or score
 
 Zone details
 ------------
@@ -123,6 +130,7 @@ import logging
 import asyncio
 from dns.resolver import Resolver
 from .rpz import reverse_to_address, address_to_reverse
+from .heuristic import heuristic_func
 
 class Request(object):
     """Everything to do with processing a request.
@@ -250,6 +258,13 @@ class Request(object):
                 '{} {}'.format(
                     (best is not None and best == resolution) and '***' or '   ',
                     resolution.chain
+                )
+            )
+            now = time.time()
+            response.append(
+                '        fs:{:0.1f} ls:{:0.1f} qc:{:d} qt:{:0.1f} h:{:0.1f}'.format(
+                    resolution.first_seen-now, resolution.last_seen-now, resolution.query_count, resolution.query_trend,
+                    heuristic_func(resolution)
                 )
             )
         

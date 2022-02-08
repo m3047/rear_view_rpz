@@ -1,1 +1,1 @@
-standard_heuristic.py
+attenuating_heuristic.py
