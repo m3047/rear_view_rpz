@@ -8,6 +8,7 @@ directions to set the zone name and DNS server address.
 Aside from standard modules, the following are required:
 * `pandas` a _KNIME_ requirement
 * `dnspython` used for "speaking DNS"
+* `public-suffix-list` for canonicalizing domains
 
 ### Field Notes on working with Meta Data
 
