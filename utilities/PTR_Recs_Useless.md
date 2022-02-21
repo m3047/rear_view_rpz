@@ -1,6 +1,8 @@
 ## Synthesized vs Actual PTR records Provide Very Different Views
 
-TLDR: The big players don't make PTR records to make life easy for you, and they're only getting bigger.
+Fred Morris Feb-2022 consulting@m3047.net
+
+**TLDR: The big players don't make PTR records to make life easy for you, and they're only getting bigger.**
 
 I've been running _Rear View RPZ_ for a while now and have had a decent chance to look at
 and play with the data. Consolidation has only grown more apparent while I wasn't paying attention!
