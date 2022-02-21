@@ -1,3 +1,7 @@
+### Findings after Running This For A While
+
+* [PTR_Recs_Useless](PTR_Recs_Useless.md) TLDR as a defender don't expect much help from the rest of the internet, but some interesting stats.
+
 ### `Rear_View-knime-workspace.tgz`
 
 This is a [KNIME](https://knime.com/) workspace for analyzing the data in the RPZ.
