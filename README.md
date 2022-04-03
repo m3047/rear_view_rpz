@@ -47,4 +47,10 @@ open an issue.
 * You are familiar with _Python_ syntax
 * You can figure out a `systemd` service file
 
+## There's more!
 
+In `/utilities` you'll find a _KNIME_ workflow which analyzes the RPZ data. It includes _Python_ nodes for:
+
+ * reading the zone (with AXFR)
+ * fetching PTR records for identified addresses
+ * canonicalizing DNS domains (based on the public suffix list)
