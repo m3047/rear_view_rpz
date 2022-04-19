@@ -65,4 +65,5 @@ I like talking with people!
 * Other questions about threat intelligence, or indicator hunting generally?
 
 **I'm reserving a one hour slot every week, just for you: whatever you want, for free.** Reach out to me at consulting@m3047.net
-or open an issue!
+or open an issue! (For clarity I'm envisioning this as a single free slot for you in the singular person sense,
+although I might make it a regular thing for you, in the singular person sense, if it tickles my fancy.)
