@@ -54,3 +54,15 @@ In `/utilities` you'll find a _KNIME_ workflow which analyzes the RPZ data. It i
  * reading the zone (with AXFR)
  * fetching PTR records for identified addresses
  * canonicalizing DNS domains (based on the public suffix list)
+
+## Want Help?
+
+I like talking with people!
+
+* Want to walk through the code?
+* Do you like having company when you're installing something for the first time?
+* Just want to talk about DNS, BIND, Python, and all that?
+* Other questions about threat intelligence, or indicator hunting generally?
+
+**I'm reserving a one hour slot every week, just for you: whatever you want, for free.** Reach out to me at consulting@m3047.net
+or open an issue!
