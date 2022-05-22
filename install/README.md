@@ -92,4 +92,7 @@ REARVIEW.EXAMPLE.COM IN SOA  DEV.NULL. DNS.EXAMPLE.COM. (
 
 ## How do I compile _BIND_?
 
+First off, ***do you need to compile BIND?*** The [ISC BIND 9 Packages](https://www.isc.org/bind/) (from ISC, not your
+OS vendor) are compiled with Dnstap support already.
+
 Look at [this Dockerfile](https://github.com/m3047/shodohflo/blob/master/examples/docker/Dockerfile) for inspiration. You will need to install the _Framestream_ and _Protobuf_ developer libraries / packages. You can download the source [here](https://www.isc.org/bind/).
