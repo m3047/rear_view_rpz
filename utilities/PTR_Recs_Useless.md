@@ -110,3 +110,9 @@ The samplings were selected for their relatively high heuristic scores, represen
 
 Again underscoring the consolidation story, the total number of synthesized domains is significantly larger
 the number of observed actual domains. The top four _actual_ domains account for 73% of the addresses.
+
+### Questions
+
+#### Where's e.g. Google Analytics?
+
+It's in an RPZ with `CNAME .`.

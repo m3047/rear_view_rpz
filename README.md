@@ -1,4 +1,4 @@
-# Rear View RPZ
+# Rear View RPZ (tm)
 
 ___status: good to go with no backlog items. I expect it to work if you satisfy the prerequisites. tested with python 3.6 & 3.8; dnspython 1.15 & 2.1; bind 9.12.3 & 9.16.23___
 
@@ -31,6 +31,26 @@ Run the policy incorporating this _RPZ_ as a view, possibly bound to a special a
 
 Here is a post with an example: https://lists.isc.org/pipermail/bind-users/2021-December/105450.html or see [Examples.txt](Examples.txt) in this directory.
 
+## Will this really help me?
+
+It depends on what's on the network you're defending: know your assets! This is a tool for discovering more about
+the off-network assets your network communicates with.
+
+Some networks (particularly in the cloud) are mostly services; these networks
+generally don't perform discovery of clients as a matter of course (access control notwithstanding). Other
+networks are mostly clients; these networks do perform discovery of services as a matter of course, and the
+primary mechanism to do this is the DNS. Some, such as networks hosting medical devices or industrial
+control systems, can be both.
+
+Threat indicator feeds (of DNS IOCs) are predominantly derived from global telemetry, whereas this tool provides
+information about your own network. Services don't perform discovery as a matter of course: the discovery process
+is outside of our knowledge horizon and global telemetry is the only option for information about that process.
+
+This tool exposes information from the local service discovery process.
+
+* **Are you defending clients of off-network services?** those clients are the assets which are going to have a local discovery process for services
+* **Are you mature enough to want visibility of permitted services?** although the vendor emphasis is on threat indicators, intelligence about allowed / expected non-threat artifacts becomes more useful and desirable as maturity increases. the information surfaced by this tool is largely non-threat artifacts
+
 ## What are the prerequisites?
 
 At the present time, you'll probably be frustrated unless you meet the following prerequisites.
@@ -47,4 +67,23 @@ open an issue.
 * You are familiar with _Python_ syntax
 * You can figure out a `systemd` service file
 
+## There's more!
 
+In `/utilities` you'll find a _KNIME_ workflow which analyzes the RPZ data. It includes _Python_ nodes for:
+
+ * reading the zone (with AXFR)
+ * fetching PTR records for identified addresses
+ * canonicalizing DNS domains (based on the public suffix list)
+
+## Want Help?
+
+I like talking with people!
+
+* Want to walk through the code?
+* Do you like having company when you're installing something for the first time?
+* Just want to talk about DNS, BIND, Python, and all that?
+* Other questions about threat intelligence, or indicator hunting generally?
+
+**I'm reserving a one hour slot every week, just for you: whatever you want, for free.** Reach out to me at consulting@m3047.net
+or open an issue! (For clarity I'm envisioning this as a single free slot for you in the singular person sense,
+although I might make it a regular thing for you, in the singular person sense, if it tickles my fancy.)
