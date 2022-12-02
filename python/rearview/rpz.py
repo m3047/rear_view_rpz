@@ -466,10 +466,7 @@ class RPZ(object):
             )
             return False
         qname = address_to_reverse(address.address)
-        ptr_value = address.best_resolution.chain[-1].rstrip('.') + '.'
-        # NOTE: There was some logic here to not do the update unless the actual
-        #       PTR association had changed or some period of time had elapsed.
-        #       But this is really a duplication of effort in db.RearView.solve_()
+        ptr_value = address.ptr_value
         
         self.contents.update_entry(qname, rdatatype.PTR, ptr_value)
 
@@ -495,14 +492,20 @@ class RPZ(object):
     async def update_(self, address, score):
         """Internal method."""
         update = Updater(self.rpz)
-        self.prepare_update(update, address, score)
+        if not self.prepare_update(update, address, score):
+            return
         
         wire_req = update.to_wire()
         wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
         try:
             resp = dns.message.from_wire(wire_resp)
         except DNSException as e:
-            logging.error('Invalid DNS response to ({} -> {})'.format(address.address, ptr_value))
+            logging.error(
+                    'Invalid DNS response to ({} -> {})'.format(
+                        address.address,
+                        address.best_resolution and address.ptr_value or '**no best resolution**'
+                    )
+                )
             self.conn_.close()
             return
         
@@ -550,25 +553,27 @@ class RPZ(object):
             PRINT_COROUTINE_ENTRY_EXIT('> rpz.RPZ.batch_update()')
 
         update = Updater(self.rpz)
-        for address, score in to_process.values():
-            self.prepare_update(update, address, score)
-        logger['batch_size'] = len(to_process)
-        
-        wire_req = update.to_wire()
-        wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
-        logger['wire_req_bytes'] = len(wire_req)
-        logger['wire_resp_bytes'] = len(wire_resp)
-        try:
-            resp = dns.message.from_wire(wire_resp)
-            logger['update_rcode'] = resp.rcode()
-            if resp.rcode() != rcode.NOERROR:
-                self.global_error('batch_update', resp)
-        except DNSException as e:
-            logger['update_rcode'] = -1
-            logging.error('Invalid DNS response to batch update')
-            self.conn_.close()
-        
-        logger['completion_timestamp'] = time()
+
+        if any( self.prepare_update(update, address, score) for address, score in to_process.values() ):
+
+            logger['batch_size'] = len(to_process)
+            
+            wire_req = update.to_wire()
+            wire_resp = await self.conn_.make_request(wire_req, self.conn_.timer('request_stats'))
+            logger['wire_req_bytes'] = len(wire_req)
+            logger['wire_resp_bytes'] = len(wire_resp)
+            try:
+                resp = dns.message.from_wire(wire_resp)
+                logger['update_rcode'] = resp.rcode()
+                if resp.rcode() != rcode.NOERROR:
+                    self.global_error('batch_update', resp)
+            except DNSException as e:
+                logger['update_rcode'] = -1
+                logging.error('Invalid DNS response to batch update')
+                self.conn_.close()
+            
+            logger['completion_timestamp'] = time()
+
         if self.batch_stats:
             timer.stop()
         if PRINT_COROUTINE_ENTRY_EXIT:

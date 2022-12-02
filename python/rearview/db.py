@@ -76,6 +76,10 @@ class Address(object):
               and chain[-1] == resolution.chain[-1]
             )
     
+    @property
+    def ptr_value(self):
+        return self.best_resolution.chain[-1].rstrip('.') + '.'
+    
     def add_resolution(self, chain):
         """Add / merge a resolution.
         
