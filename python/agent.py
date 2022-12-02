@@ -60,9 +60,14 @@ import asyncio
 import dns.rdatatype as rdatatype
 import dns.rcode as rcode
 
-from shodohflo.fstrm import Consumer, Server, AsyncUnixSocket
+from shodohflo.fstrm import Consumer, Server, AsyncUnixSocket, PYTHON_IS_311
 import shodohflo.protobuf.dnstap as dnstap
 from shodohflo.statistics import StatisticsFactory
+
+if PYTHON_IS_311:
+    from asyncio import CancelledError
+else:
+    from concurrent.futures import CancelledError
 
 from rearview.db import RearView
 
@@ -197,34 +202,42 @@ async def statistics_report(statistics):
     return
 
 def main():
-    logging.info('DNS Agent starting. Socket: {}  RPZ: {}'.format(SOCKET_ADDRESS, RESPONSE_POLICY_ZONE))
-
-    event_loop = asyncio.get_event_loop()
-
+    logging.info('Rearview Agent starting. Socket: {}  RPZ: {}'.format(SOCKET_ADDRESS, RESPONSE_POLICY_ZONE))
+    
+    event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(event_loop)
+    
     if CONSOLE:
         console_ctxt = console.Context()
         console_service = event_loop.run_until_complete(
                 asyncio.start_server(
                     console_ctxt.handle_requests,
                     CONSOLE['host'], CONSOLE['port'], 
-                    loop=event_loop, limit=MAX_READ_SIZE
+                    limit=MAX_READ_SIZE
                 )
             )
-
+    
     if STATS:
         statistics = StatisticsFactory()
-        asyncio.run_coroutine_threadsafe(statistics_report(statistics), event_loop)
+        event_loop.create_task(statistics_report(statistics))
     else:
         statistics = None
-
+    
     dnstap = DnsTap(event_loop, statistics)
     if CONSOLE:
         console_ctxt.dnstap = dnstap
-
-    Server(AsyncUnixSocket(SOCKET_ADDRESS),
-           dnstap, event_loop
-          ).listen_asyncio()
-
+    
+    try:
+        event_loop.run_until_complete(
+            Server( AsyncUnixSocket(SOCKET_ADDRESS),
+                    dnstap, event_loop
+                ).listen_asyncio()
+            )
+    except (KeyboardInterrupt, CancelledError):
+        pass
+    
+    event_loop.close
+    
     return
 
 if __name__ == '__main__':

@@ -343,9 +343,8 @@ class RearView(object):
 
         self.address_record_types = address_record_types
         
-        self.association_queue = Queue(loop=event_loop)
-        #self.eviction_queue = Queue(loop=event_loop)   # Cache evictions are done more or less "real time".
-        self.solver_queue = Queue(loop=event_loop)
+        self.association_queue = Queue()
+        self.solver_queue = Queue()
         self.associations = Associator(cache_size is None and self.DEFAULT_CACHE_SIZE or cache_size,
                                        self.schedule_cache_eviction
                                 )

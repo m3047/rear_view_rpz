@@ -19,6 +19,10 @@ We try to keep what's in the telemetry view and what's actually being served by
 the zone in sync.
 """
 
+import sysconfig
+
+PYTHON_IS_311 = int( sysconfig.get_python_version().split('.')[1] ) >= 11
+
 import traceback
 import logging
 
@@ -43,6 +47,11 @@ from dns.update import Update as Updater
 from ipaddress import ip_address
 
 from . import CircularLogger
+
+if PYTHON_IS_311:
+    from asyncio import CancelledError
+else:
+    from concurrent.futures import CancelledError
 
 PRINT_COROUTINE_ENTRY_EXIT = None
 
@@ -255,7 +264,7 @@ class RPZ(object):
         self.rpz = rpz.lower().rstrip('.') + '.'
         self.address_record_types = address_record_types
         self.garbage_logger = garbage_logger
-        self.task_queue = Queue(loop=event_loop)
+        self.task_queue = Queue()
         self.processor_ = self.event_loop.create_task(self.queue_processor())
         self.conn_ = Connection(event_loop, server, rpz, statistics)
         self.contents = ZoneContents()
@@ -280,8 +289,10 @@ class RPZ(object):
 
         self.processor_.cancel()
         self.batch_monitor_.cancel()
-        await self.processor_
-        await self.batch_monitor_
+        try:
+            await asyncio.gather( self.processor_, self.batch_monitor_, return_exceptions=True)
+        except CancelledError:
+            pass
 
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('< rpz.RPZ.close()')

@@ -68,19 +68,26 @@ fresh copy of the zonefile before running tests!
 
 """
 
+import sysconfig
+
+PYTHON_IS_311 = int( sysconfig.get_python_version().split('.')[1] ) >= 11
+
 import sys
 import unittest
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
 import asyncio
-from concurrent.futures import CancelledError
+
+if PYTHON_IS_311:
+    from asyncio import CancelledError
+else:
+    from concurrent.futures import CancelledError
 
 import socket
 
 import dns.message
 from dns.update import Update as Updater
-from dns.resolver import Resolver
 import dns.resolver
 import dns.rdatatype as rdatatype
 import dns.rcode as rcode
@@ -135,19 +142,40 @@ class ZoneUpdateFailure(Exception):
     """A zone update as part of test orchestration failed."""
     pass
 
+class Resolver(object):
+    
+    ATTRS = { 'resolver' }
+
+    def __init__(self):
+        self.resolver = dns.resolver.Resolver()
+        return
+    
+    def __setattr__(self, k, v):
+        if k in self.ATTRS:
+            object.__setattr__(self, k, v)
+        else:
+            setattr(self.resolver, k, v)
+        return
+
+    def query(self, *args):
+        if PYTHON_IS_311:
+            return self.resolver.resolve(*args)
+        else:
+            return self.resolver.query(*args)
+
 class TestRPZAccess(TestCase):
     """Response Policy Zone"""
     
     ASSOCIATOR_CACHE_SIZE = 20
     
     def setUp(self):
-        self.event_loop = asyncio.get_event_loop()
+        self.event_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop( self.event_loop )
         self.rpz = rpz.RPZ( self.event_loop, SERVER_ADDRESS, TEST_ZONE, None, RearView.DEFAULT_ADDRESS_RECORDS, None )
         self.remove = set()
         return
     
     def tearDown(self):
-        
         # Build an update to delete all dangling records.
         update = Updater( TEST_ZONE )
         for oname in self.remove:
