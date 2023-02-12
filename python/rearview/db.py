@@ -453,10 +453,13 @@ class RearView(object):
             # to the next batch refresh.
             self.rpz.add_to_batch_refresh(batch)
             
-            self.cache_eviction_scheduled = False
         except Exception as e:
             traceback.print_exc()
             self.event_loop.stop()
+
+        # At this point if there was an exception then the loop is stopping anyway,
+        # but maybe it's a little clearer that this is a finalizer if it's out here.
+        self.cache_eviction_scheduled = None
 
         if self.cache_stats:
             timer.stop()
@@ -474,8 +477,12 @@ class RearView(object):
         """
         if self.cache_eviction_scheduled:
             return
-        self.cache_eviction_scheduled = True
-        self.event_loop.create_task(self.do_cache_eviction(self.cache_stats and self.cache_stats.start_timer() or None))
+        # This implicitly captures the Task reference, so we don't need to do anything
+        # else to make it Strong.
+        self.cache_eviction_scheduled = self.event_loop.create_task(
+                self.do_cache_eviction(
+                    self.cache_stats and self.cache_stats.start_timer() or None
+            )   )
         return
 
     def process_answer_(self, response):

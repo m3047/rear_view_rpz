@@ -13,16 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""DNS Agent.
+"""RearView Agent.
 
 This script takes no arguments.
 
 REQUIRES PYTHON 3.6 OR BETTER
 
-Uses Dnstap to capture A and AAAA responses to specific addresses and send
-them to Redis. By default only Client Response type messages are processed
-and you'll get better performance if you configure your DNS server to only
-send such messages. The expected specification for BIND in named.conf is:
+Uses Dnstap to capture A and AAAA responses to specific addresses and uses
+them to maintain PTR records in a DNS Response Policy Zone (RPZ). By default
+only Client Response type messages are processed and you'll get better
+performance if you configure your DNS server to only send such messages. The
+expected specification for BIND in named.conf is:
 
     dnstap { client response; };
     dnstap-output unix "/tmp/dnstap";
@@ -47,8 +48,8 @@ This is adapted from the DNS agent which ships with ShoDoHFlo:
   https://github.com/m3047/shodohflo/blob/master/agents/dns_agent.py
 
 In my production environment I actually deploy a hybrid agent which performs
-the tasks of both. I hope you can "line up the dials", I've strived not to
-make it difficult.
+the tasks of both. if you intend to do the same I hope you can "line up the
+dials", I've strived not to make it difficult.
 """
 
 import sys
@@ -219,7 +220,7 @@ def main():
     
     if STATS:
         statistics = StatisticsFactory()
-        event_loop.create_task(statistics_report(statistics))
+        stats_routine = event_loop.create_task(statistics_report(statistics))
     else:
         statistics = None
     
@@ -236,7 +237,7 @@ def main():
     except (KeyboardInterrupt, CancelledError):
         pass
     
-    event_loop.close
+    event_loop.close()
     
     return
 
