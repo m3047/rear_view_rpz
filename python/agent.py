@@ -202,6 +202,15 @@ async def statistics_report(statistics):
                 )
     return
 
+async def close_tasks(tasks):
+    all_tasks = asyncio.gather(*tasks)
+    all_tasks.cancel()
+    try:
+        await all_tasks
+    except CancelledError:
+        pass
+    return
+
 def main():
     logging.info('Rearview Agent starting. Socket: {}  RPZ: {}'.format(SOCKET_ADDRESS, RESPONSE_POLICY_ZONE))
     
@@ -236,6 +245,14 @@ def main():
             )
     except (KeyboardInterrupt, CancelledError):
         pass
+
+    if PYTHON_IS_311:
+        tasks = asyncio.all_tasks(event_loop)
+    else:
+        tasks = asyncio.Task.all_tasks(event_loop)
+
+    if tasks:
+        event_loop.run_until_complete(close_tasks(tasks))
     
     event_loop.close()
     
