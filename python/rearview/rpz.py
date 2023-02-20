@@ -565,7 +565,10 @@ class RPZ(object):
 
         update = Updater(self.rpz)
 
-        if any( self.prepare_update(update, address, score) for address, score in to_process.values() ):
+        # NOTE: This was using any() which had the unfortunate side effect of bailing the first time
+        #       self.prepare_update() returned True. sum() does the right thing, allowing the entire
+        #       to_process contents to be processed.
+        if sum( self.prepare_update(update, address, score) for address, score in to_process.values() ):
 
             logger['batch_size'] = len(to_process)
             
