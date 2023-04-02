@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2019-2022 by Fred Morris Tacoma WA
+# Copyright (c) 2019-2023 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -234,15 +234,18 @@ def main():
         statistics = None
     
     dnstap = DnsTap(event_loop, statistics)
+    server = Server(
+                AsyncUnixSocket(SOCKET_ADDRESS),
+                dnstap, event_loop
+            )
+    
     if CONSOLE:
         console_ctxt.dnstap = dnstap
+        console_ctxt.server = server
     
     try:
-        event_loop.run_until_complete(
-            Server( AsyncUnixSocket(SOCKET_ADDRESS),
-                    dnstap, event_loop
-                ).listen_asyncio()
-            )
+        event_loop.run_until_complete( server.listen_asyncio() )
+
     except (KeyboardInterrupt, CancelledError):
         pass
 
