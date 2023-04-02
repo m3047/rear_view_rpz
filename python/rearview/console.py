@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021-2022 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2023 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -107,12 +107,30 @@ Batches go through three phases, at least for logging purposes:
 2) The batch is accumulating addresses to update with fresh information.
 3) The batch is written to the zone as an update.
 
+Scheduled Coroutines
+--------------------
+
+    coro(tines}
+    
+Displays counts of all scheduled coroutines.
+
+Processors
+-----------------
+
+    proc{essors}
+
+Tracks shodohflo.fstrm frame processors.
+
 Quit
 ----
 
     quit
     
 Ends the console session; no other response occurs.
+
+    exit
+    
+Does the same thing.
 
 Response Codes
 --------------
@@ -125,12 +143,17 @@ Each response line is prepended by one of these codes and an ASCII space.
     400 User error / bad request.
     500 Not found or internal error.
 """
+import sysconfig
+
+PYTHON_IS_311 = int( sysconfig.get_python_version().split('.')[1] ) >= 11
+
 import time
 import logging
 import asyncio
 from dns.resolver import Resolver
 from .rpz import reverse_to_address, address_to_reverse
 from .heuristic import heuristic_func
+from . import CountingDict
 
 class Request(object):
     """Everything to do with processing a request.
@@ -140,11 +163,14 @@ class Request(object):
     to do.
     """
 
-    COMMANDS = dict(a2z=1, address=2, entry=2, qd=1, cache=3, evictions=2, refresh=2, quit=1)
+    COMMANDS = dict(a2z=1, address=2, entry=2, qd=1, cache=3, evictions=2, refresh=2,
+                    coroutines=1, processors=1, quit=1, exit=1
+                )
     ABBREVIATED = { k for k in COMMANDS.keys() if len(k) > 4 }
 
-    def __init__(self, message, dnstap):
-        self.rear_view = dnstap.rear_view
+    def __init__(self, message, dnstap_consumer, dnstap_server):
+        self.rear_view = dnstap_consumer.rear_view
+        self.dnstap_server = dnstap_server
         self.response = ""
         self.quit_session = False
         request = message.strip().split()
@@ -494,11 +520,33 @@ class Request(object):
                 )
             
         return 200, response
+    
+    def coroutines(self, request):
+        """Counts of all scheduled coroutines."""
+        counts = CountingDict()
+        for task in (PYTHON_IS_311 and asyncio.all_tasks() or asyncio.Task.all_tasks()):
+            counts.increment(task._coro.__name__)
+            
+        width = max( len(k) for k in counts.keys() )
+        
+        response = [
+                "{:<{width}s} {:>3d}".format(k, counts[k], width=width)
+                for k in sorted(counts.keys())
+            ]
+        
+        return 200, response
+    
+    def processors(self, request):
+        """Fstrm Coroutine references stashed in a set to make them strong."""
+        server = self.dnstap_server
+        return 200, [ 'Processors: {}   Tasks: {}'.format( len(server.processors), sum( len(p.tasks) for p in server.processors ) )  ]
                 
     def quit(self, request):
-        """quit"""
+        """quit / exit"""
         self.quit_session = True
         return 200, []
+    
+    exit = quit
 
     def bad_request(self, reason):
         """A bad/unrecognized request."""
@@ -506,13 +554,14 @@ class Request(object):
 
 class Context(object):
     """Context for the console."""
-    def __init__(self, dnstap=None):
+    def __init__(self, dnstap=None, server=None):
         """Create a context object.
         
-        dnstap is normally set in code, but we pass it in with a default of
-        None to make its presence known.
+        dnstap and server are normally set in code, but we pass them in with
+        a default of None to make their presence known.
         """
         self.dnstap = dnstap
+        self.server = server
         return
     
     async def handle_requests(self, reader, writer):
@@ -528,7 +577,7 @@ class Context(object):
             if not message:
                 break
 
-            request = Request(message, self.dnstap)
+            request = Request(message, self.dnstap, self.server)
             if request.quit_session:
                 break
             if not request.response:
