@@ -26,7 +26,7 @@ def heuristic_func(resolution):
     """This is the heuristic function.
 
     It can access some built-in properties to get information about the
-    Resolution object. See rearview.Heuristics as well as db.Resolution.
+    Resolution object. See rearview.Heuristics as well as rearview.db.Resolution.
 
     It returns a positive number, where a larger number is "better".
     
