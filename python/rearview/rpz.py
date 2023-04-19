@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021-2022 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2023 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -486,16 +486,13 @@ class RPZ(object):
         update.add(qname, TTL, rdatatype.PTR, ptr_value)
         update.add(qname, TTL, rdatatype.TXT,
             ','.join((
-                '{}={}'.format( k, v )
-                for k, v in
-                ( ('depth', len(address.best_resolution.chain)),
-                  ('first', address.best_resolution.first_seen),
-                  ('last',  address.best_resolution.last_seen),
-                  ('count', address.best_resolution.query_count),
-                  ('trend', address.best_resolution.query_trend),
-                  ('update', time()),
-                  ('score', score)
-                )
+                  'depth={}'.format(len(address.best_resolution.chain)),
+                  'first={}'.format(int(address.best_resolution.first_seen)),
+                  'last={}'.format(int(address.best_resolution.last_seen)),
+                  'count={}'.format(address.best_resolution.query_count),
+                  'trend={}'.format(int(address.best_resolution.query_trend)),
+                  'update={}'.format(int(time())),
+                  'score={:0.3f}'.format(score)
             ))
         )
         return True
