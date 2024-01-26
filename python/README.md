@@ -27,7 +27,7 @@ in `agent.py`).
 Setting `PRINT_COROUTINE_ENTRY_EXIT` will log coroutine entry/exits. If you're trying to understand the
 code turning this on will help. It's very verbose though, and it will negatively impact performance.
 
-### the console
+### The Console
 You can enable a console, which will listen on the unencrypted TCP port of your choosing. I won't waste
 your time with a _mea culpa_ about how dangerous this is! It only provides readonly access but it could
 impact performance if abused.
@@ -47,6 +47,26 @@ Briefly, there are three views of the data in the current implementation:
 This tool can show if there are discrepancies between the two in-memory views, detailed info for
 an address in all of the views, depths of processing queues (not the same as statistics), and information
 about the cache eviction queue.
+
+### Ingesting Telemetry
+Defining `UDP_LISTENER` in the configuration file enables a UDP listener which expects telemetry in
+JSON format. This can be used in lieu of or in addition to receipt of _Dnstap_ telemetry.
+
+For simple, standalone use _Dnstap_ is straightforward. If you have telemetry from multiple caching
+nameservers (or from some other source entirely) then this may be a useful option.
+
+At the moment work is ongoing in [ShoDoHFlo](https://github.com/m3047/shodohflo) to split the existing
+_DNS Agent_ which reads _Dnstap_ telemetry into separate _Dnstap_ and _DNS_ parts.
+
+The fields which _Rearview_ expects to see are `address` and `chain` as documented in m3047/shodohflo#11:
+
+```
+{"address":"10.2.66.5","chain":["server.example.com.","www.example.com."]}
+```
+
+Note that the chain is ***reversed*** from normal understanding. The semantics above should be understood as
+
+    www.example.com -> server.example.com -> 10.2.66.5
 
 ### Messages
 
