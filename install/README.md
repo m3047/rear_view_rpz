@@ -57,6 +57,11 @@ INFO:root:Accepting: protobuf:dnstap.Dnstap
 {"client": "10.0.0.118", "qtype": "A", "status": "NOERROR", "chain": [["pool.ntp.org."], ["64.142.54.12", "208.67.72.50", "45.15.168.98", "137.190.2.4"]]}
 ```
 
+###### Dnstap is technically optional
+
+The _Rearview agent_ has the capability to ingest telemetry in JSON format via a UDP socket. If you have that source of telemetry
+then technically you don't need to set up _BIND_ to write to the unix socket.
+
 #### Zone Declaration
 
 Add the following zone declaration, changing the name of the zone as appropriate:
