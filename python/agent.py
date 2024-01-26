@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2019-2023 by Fred Morris Tacoma WA
+# Copyright (c) 2019-2024 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -77,6 +77,7 @@ MAX_READ_SIZE = 1024
 CONTENT_TYPE = 'protobuf:dnstap.Dnstap'
 ADDRESS_CLASSES = { rdatatype.A, rdatatype.AAAA }
 GARBAGE_LOGGER = logging.warning
+UDP_LISTENER = None
 
 if __name__ == "__main__":
     from configuration import *
@@ -106,6 +107,22 @@ STATISTICS_PRINTER = logging.info
 
 def hexify(data):
     return ''.join(('{:02x} '.format(b) for b in data))
+
+class UDPListener(asyncio.DatagramProtocol):
+    """UDP Listener.
+    
+    Properties
+    
+        rear_view   Set via code after the object is instantiated.
+    """
+    
+    def connection_made(self, transport):
+        self.transport = transport
+        return
+    
+    def datagram_received(self, datagram, addr):
+        self.rear_view.process_telemetry( datagram )
+        return
 
 class DnsTap(Consumer):
     
@@ -238,16 +255,32 @@ def main():
                 AsyncUnixSocket(SOCKET_ADDRESS),
                 dnstap, event_loop
             )
+
+    if UDP_LISTENER:
+        try:
+            listener = event_loop.create_datagram_endpoint( UDPListener, local_addr=tuple(UDP_LISTENER[k] for k in ('host','port')) )
+            transport, service = event_loop.run_until_complete(listener)
+            service.rear_view = dnstap.rear_view
+        except PermissionError:
+            print('Permission Denied! (are you root?)', file=sys.stderr)
+            sys.exit(1)
+        except OSError as e:
+            print('{} (did you supply a local address and port?)'.format(e), file=sys.stderr)
+            sys.exit(1)
     
     if CONSOLE:
         console_ctxt.dnstap = dnstap
         console_ctxt.server = server
     
     try:
+        # This is the actual server running essentially forever.
         event_loop.run_until_complete( server.listen_asyncio() )
 
     except (KeyboardInterrupt, CancelledError):
         pass
+
+    if UDP_LISTENER:
+        transport.close()
 
     if PYTHON_IS_311:
         tasks = asyncio.all_tasks(event_loop)

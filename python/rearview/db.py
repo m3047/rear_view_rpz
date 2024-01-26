@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021-2022 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2024 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ from collections import deque as Deque
 from heapq import heappush, heappop
 
 import dns.rdatatype as rdatatype
+from json import loads
+from ipaddress import ip_address
 
 from . import Heuristics, CircularLogger
 from .heuristic import heuristic_func
@@ -202,7 +204,27 @@ class Associator(object):
         return
     
     def update_resolution(self, address, chain):
-        """Adds an address and the resolution, implicitly updating some counters."""
+        """Adds an address and the resolution, implicitly updating some counters.
+        
+        Parameters:
+            address An IP address (4 or 6) as a string.
+            chain   A tuple with strings representing a reversed CNAME chain
+            
+        Note that chain is just the CNAMEs comprising the chain. For example presuming
+        the following data:
+        
+            www.example.com                 IN  CNAME   server1.example.com
+            server1.example.com             IN  CNAME   38479043871.example-cloud.com
+            38479043871.example-cloud.com   IN  A       10.0.43.3
+            
+        The arguments would be:
+        
+            address:    10.0.43.3
+            chain:      ('38479043871.example-cloud.com.', 'server1.example.com.', 'www.example.com.')
+        
+        Note the trailing dots on the FQDNs in chain. Implicitly, the address is pointed to by the
+        first element in chain.
+        """
         if address not in self.addresses:
             self.addresses[address] = Address(address)
             self.cache.appendleft(self.addresses[address])
@@ -313,6 +335,10 @@ class Associator(object):
         self.logger['n_resolutions'] = self.n_resolutions
         
         return affected_addresses.copy(), recycled.copy()
+    
+class InvalidTelemetryException(LookupError):
+    """Telemetry is incorrect."""
+    pass
 
 class RearView(object):
     """This is the database-like interface.
@@ -338,6 +364,7 @@ class RearView(object):
             self.solve_stats = statistics.Collector("solve")
             self.cache_stats = statistics.Collector("cache eviction")
             self.answer_stats = statistics.Collector("process answer")
+            self.telemetry_stats = statistics.Collector("process telemetry")
         else:
             self.solve_stats = self.cache_stats = self.answer_stats = None
 
@@ -484,6 +511,26 @@ class RearView(object):
                     self.cache_stats and self.cache_stats.start_timer() or None
             )   )
         return
+    
+    async def process_resolution_coro(self, telemetry, timer):
+        """Coroutine generating updates to the memory view from UDP telemetry.
+        
+        The telemetry is presumed to contain a dictionary containing the keys
+        address and chain. See Associator.update_resolution().
+        """
+        if PRINT_COROUTINE_ENTRY_EXIT:
+            PRINT_COROUTINE_ENTRY_EXIT('> db.RearView.process_resolution_coro()')
+        
+        if self.associations.update_resolution( telemetry['address'], telemetry['chain'] ):
+            self.solver_queue.put_nowait(
+                self.solve(telemetry['address'], self.solve_stats and self.solve_stats.start_timer() or None)
+            )
+        
+        if self.telemetry_stats:
+            timer.stop()
+        if PRINT_COROUTINE_ENTRY_EXIT:
+            PRINT_COROUTINE_ENTRY_EXIT('< db.RearView.process_resolution_coro()')
+        return
 
     def process_answer_(self, response):
         """Internal memory view updater."""
@@ -537,6 +584,35 @@ class RearView(object):
             timer.stop()
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('< db.RearView.process_answer_coro()')
+        return
+    
+    def process_telemetry(self, json_telemetry):
+        """Process JSON telemetry.
+        
+        The telemetry presumably comes from a UDP socket. See ShoDoHFlo/agents/telemetry_agent.py
+        
+        Scheduling:
+            Association queue.
+        """
+        try:
+            telemetry = loads( json_telemetry )
+            chain = telemetry['chain']
+            for fqdn in chain:
+                if type(fqdn) is not str:
+                    raise InvalidTelemetryException('"chain" elements must be FQDNs')
+                if fqdn[-1] != ".":
+                    raise InvalidTelemetryException('"chain" element "{}" missing trailing "."'.format(fqdn))
+            if type(chain) is not tuple:
+                telemetry['chain'] = tuple(chain)
+            ignore = ip_address(telemetry['address'])
+        except Exception as e:
+            logging.error('Telemetry: {}: {}'.format(type(e).__name__, e))
+            return
+        
+        self.association_queue.put_nowait(
+            self.process_resolution_coro( telemetry, self.telemetry_stats and self.telemetry_stats.start_timer() or None)
+        )
+        
         return
 
     def process_answer(self, response):

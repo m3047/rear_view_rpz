@@ -3,6 +3,11 @@
 # Dnstap unix domain socket on local host.
 SOCKET_ADDRESS = '/tmp/dnstap'
 
+# The agent can listen for telemetry on a UDP socket. If you want this specify a
+# local interface address and port number. See ShoDoHFlo/agents for more information.
+UDP_LISTENER = None
+# UDP_LISTENER = dict(host='10.0.1.253', port=3053)
+
 # Explicitly set the logging level if desired.
 #import logging
 #LOG_LEVEL = logging.INFO
