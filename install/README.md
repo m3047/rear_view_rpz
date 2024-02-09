@@ -60,7 +60,8 @@ INFO:root:Accepting: protobuf:dnstap.Dnstap
 ###### Dnstap is technically optional
 
 The _Rearview agent_ has the capability to ingest telemetry in JSON format via a UDP socket. If you have that source of telemetry
-then technically you don't need to set up _BIND_ to write to the unix socket.
+then technically you don't need to set up _BIND_ to write to the unix socket. At least for the time being, you do still need to
+configure the socket, even if it will be unused.
 
 #### Zone Declaration
 
