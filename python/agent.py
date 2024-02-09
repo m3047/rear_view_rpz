@@ -56,7 +56,11 @@ import sys
 from os import path
 import logging
 
+import socket
 import asyncio
+
+import struct
+import rearview.mcast_structs as structs
 
 import dns.rdatatype as rdatatype
 import dns.rcode as rcode
@@ -64,6 +68,8 @@ import dns.rcode as rcode
 from shodohflo.fstrm import Consumer, Server, AsyncUnixSocket, PYTHON_IS_311
 import shodohflo.protobuf.dnstap as dnstap
 from shodohflo.statistics import StatisticsFactory
+
+from ipaddress import ip_address
 
 if PYTHON_IS_311:
     from asyncio import CancelledError
@@ -104,6 +110,8 @@ if PRINT_COROUTINE_ENTRY_EXIT:
 
 # Similar to the foregoing, but always set to something valid.
 STATISTICS_PRINTER = logging.info
+
+BIG_ENDIAN = ( 4, 'big' )   # Used for packing addresses when setting socket options.
 
 def hexify(data):
     return ''.join(('{:02x} '.format(b) for b in data))
@@ -229,7 +237,18 @@ async def close_tasks(tasks):
     return
 
 def main():
-    logging.info('Rearview Agent starting. Socket: {}  RPZ: {}'.format(SOCKET_ADDRESS, RESPONSE_POLICY_ZONE))
+    if UDP_LISTENER:
+        if 'interface' in UDP_LISTENER:
+            logging.info('Rearview Agent starting. Multicast Group: {}:{}  Listening on: {}  RPZ: {}'.format(
+                            str(UDP_LISTENER['recipient']), UDP_LISTENER['port'], UDP_LISTENER['interface'],
+                            RESPONSE_POLICY_ZONE
+                        ) )
+        else:
+            logging.info('Rearview Agent starting. Listening on: {}:{}  RPZ: {}'.format(
+                            str(UDP_LISTENER['recipient']), UDP_LISTENER['port'], RESPONSE_POLICY_ZONE
+                        ) )
+    else:
+        logging.info('Rearview Agent starting. Socket: {}  RPZ: {}'.format(SOCKET_ADDRESS, RESPONSE_POLICY_ZONE))
     
     event_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(event_loop)
@@ -258,8 +277,21 @@ def main():
 
     if UDP_LISTENER:
         try:
-            listener = event_loop.create_datagram_endpoint( UDPListener, local_addr=tuple(UDP_LISTENER[k] for k in ('host','port')) )
-            transport, service = event_loop.run_until_complete(listener)
+            if 'interface' in UDP_LISTENER:
+                sock = socket.socket( socket.AF_INET, socket.SOCK_DGRAM | socket.SOCK_NONBLOCK )
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                sock.bind(( ALL_INTERFACES, port ))
+                multicast_interfaces = struct.pack( structs.ip_mreq.item.format,
+                                                    int(UDP_LISTENER['recipient']).to_bytes(*BIG_ENDIAN),
+                                                    int(UDP_LISTENER['interface']).to_bytes(*BIG_ENDIAN)
+                                                  )
+                sock.setsockopt( socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, multicast_interfaces )
+                listener = event_loop.create_datagram_endpoint( UDPListener, sock=sock )
+            else:
+                listener = event_loop.create_datagram_endpoint( UDPListener,
+                                                local_addr=( str(UDP_LISTENER['recipient']), UDP_LISTENER['port'] )
+                                                              )
+            transport,service = event_loop.run_until_complete(listener)
             service.rear_view = dnstap.rear_view
         except PermissionError:
             print('Permission Denied! (are you root?)', file=sys.stderr)
@@ -295,5 +327,19 @@ def main():
     return
 
 if __name__ == '__main__':
+    if UDP_LISTENER:
+        try:
+            UDP_LISTENER['recipient'] = ip_address(UDP_LISTENER['recipient'])
+            UDP_LISTENER['port'] = int(UDP_LISTENER['port'])
+            if UDP_LISTENER['recipient'].is_multicast:
+                UDP_LISTENER['interface'] = UDP_LISTENER['interface']
+            else:
+                if 'interface' in UDP_LISTENER:
+                    print('interface specified, but recipient is not multicast', file=sys.stderr)
+                    sys.exit(1)
+        except Exception as e:
+            print('UDP_LISTENER error: {}'.format(e), file=sys.stderr)
+            sys.exit(1)
+            
     main()
     
