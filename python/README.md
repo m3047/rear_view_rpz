@@ -68,6 +68,23 @@ Note that the chain is ***reversed*** from normal understanding. The semantics a
 
     www.example.com -> server.example.com -> 10.2.66.5
 
+Define `UDP_LISTENER` as a dictionary with the following keys:
+
+* `recipient` The address to listen on (implicitly defining an interface).
+* `port` The port to listen on.
+
+##### multicast
+
+NO FREE SUPPORT IS PROVIDED FOR MULTICAST ISSUES AND AT THE PRESENT TIME IT ONLY WORKS WITH IPv4
+
+However, multicast is supported. If you have multiple consumers of _Dnstap_ telemetry, this is how you do it.
+
+Define `UDP_LISTENER` as a dictionary with the following keys:
+
+* `recipient` The multicast group to listen on.
+* `port` The port to listen on.
+* `interface` The interface to listen for group traffic on. Specify the address which is bound to the interface at the system level.
+
 ### Messages
 
 ##### unexpected qname {} in zonefile on load
