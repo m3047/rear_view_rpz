@@ -112,6 +112,7 @@ if PRINT_COROUTINE_ENTRY_EXIT:
 STATISTICS_PRINTER = logging.info
 
 BIG_ENDIAN = ( 4, 'big' )   # Used for packing addresses when setting socket options.
+ALL_INTERFACES = ''
 
 def hexify(data):
     return ''.join(('{:02x} '.format(b) for b in data))
