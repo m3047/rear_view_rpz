@@ -281,7 +281,7 @@ def main():
             if 'interface' in UDP_LISTENER:
                 sock = socket.socket( socket.AF_INET, socket.SOCK_DGRAM | socket.SOCK_NONBLOCK )
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                sock.bind(( ALL_INTERFACES, port ))
+                sock.bind(( ALL_INTERFACES, UDP_LISTENER['port'] ))
                 multicast_interfaces = struct.pack( structs.ip_mreq.item.format,
                                                     int(UDP_LISTENER['recipient']).to_bytes(*BIG_ENDIAN),
                                                     int(UDP_LISTENER['interface']).to_bytes(*BIG_ENDIAN)
