@@ -283,8 +283,8 @@ def main():
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 sock.bind(( ALL_INTERFACES, UDP_LISTENER['port'] ))
                 multicast_interfaces = struct.pack( structs.ip_mreq.item.format,
-                                                    int(UDP_LISTENER['recipient']).to_bytes(*BIG_ENDIAN),
-                                                    int(UDP_LISTENER['interface']).to_bytes(*BIG_ENDIAN)
+                                                    int(ip_address(UDP_LISTENER['recipient'])).to_bytes(*BIG_ENDIAN),
+                                                    int(ip_address(UDP_LISTENER['interface'])).to_bytes(*BIG_ENDIAN)
                                                   )
                 sock.setsockopt( socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, multicast_interfaces )
                 listener = event_loop.create_datagram_endpoint( UDPListener, sock=sock )
