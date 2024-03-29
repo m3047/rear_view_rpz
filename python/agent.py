@@ -84,12 +84,14 @@ CONTENT_TYPE = 'protobuf:dnstap.Dnstap'
 ADDRESS_CLASSES = { rdatatype.A, rdatatype.AAAA }
 GARBAGE_LOGGER = logging.warning
 UDP_LISTENER = None
+TELEMETRY_ID = 'id'
+LOG_LEVEL = None
+STATS = None
 
 if __name__ == "__main__":
     from configuration import *
 else:
     SOCKET_ADDRESS = '/tmp/dnstap'
-    LOG_LEVEL = None
     STATS = None
     DNS_SERVER = '127.0.0.1'
     RESPONSE_POLICY_ZONE = 'rpz.example.com'
@@ -130,7 +132,7 @@ class UDPListener(asyncio.DatagramProtocol):
         return
     
     def datagram_received(self, datagram, addr):
-        self.rear_view.process_telemetry( datagram )
+        self.rear_view.process_telemetry( datagram, addr )
         return
 
 class DnsTap(Consumer):
@@ -145,7 +147,8 @@ class DnsTap(Consumer):
                           setting this to None, but then you'll get potentially
                           strange client addresses logged to Redis.
         """
-        self.rear_view = RearView(event_loop, DNS_SERVER, RESPONSE_POLICY_ZONE, statistics, CACHE_SIZE, ADDRESS_CLASSES, GARBAGE_LOGGER)
+        self.rear_view = RearView(event_loop, DNS_SERVER, RESPONSE_POLICY_ZONE, statistics, CACHE_SIZE,
+                                  ADDRESS_CLASSES, GARBAGE_LOGGER, TELEMETRY_ID)
         self.message_type = message_type
         if STATS:
             self.consume_stats = statistics.Collector("consume")

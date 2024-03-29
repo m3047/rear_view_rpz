@@ -35,7 +35,67 @@ from . import Heuristics, CircularLogger
 from .heuristic import heuristic_func
 from .rpz import RPZ
 
+STALE_PEER = 3600   # 1 hour
+
 PRINT_COROUTINE_ENTRY_EXIT = None
+
+class DictOfCounters(dict):
+    REAP_FREQUENCY = 60 # Once a minute.
+    
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+        self.next_reap = time() + self.REAP_FREQUENCY
+        return
+    
+    def update_entry(self, entry, v=None):
+        """Update / check for stale entries.
+        
+        Each entry is an array with two elements:
+            0   The sequence number we're tracking for the peer.
+            1   The timestamp when the sequence number last changed.
+        """
+        now = time()
+
+        if v is None:
+            entry[0] += 1
+        else:
+            entry[0] = v
+        entry[1] = now
+
+        if now < self.next_reap:
+            return
+        while self.next_reap < now:
+            self.next_reap += self.REAP_FREQUENCY
+
+        reap = now - STALE_PEER
+        to_reap = set()
+        for peer, peer_entry in self.items():
+            if peer_entry[1] < reap:
+                to_reap.add(peer)
+        for peer in to_reap:
+            logging.info('Reaped: {}'.format(peer))
+            del self[peer]
+
+        return
+    
+    def inc(self, k):
+        """Return the postincrement value."""
+        if k not in self:
+            self[k] = [0, 0]
+        self.update_entry( self[k] )
+        return self[k][0]
+    
+    def put(self, k, v):
+        if k not in self:
+            self[k] = [0, 0]
+        self.update_entry( self[k], v )
+        return
+
+    def expected(self, k, v):
+        if k not in self:
+            return False
+        self.update_entry( self[k] )
+        return self[k][0] == v
 
 class Address(object):
     """An IP address, with one or more resolutions."""
@@ -358,8 +418,10 @@ class RearView(object):
     DEFAULT_CACHE_SIZE = 10000
     
     def __init__(self, event_loop, dns_server, rpz, statistics=None, cache_size=None,
-                 address_record_types=DEFAULT_ADDRESS_RECORDS, garbage_logger=logging.warning):
+                 address_record_types=DEFAULT_ADDRESS_RECORDS, garbage_logger=logging.warning, telemetry_id=None):
         self.event_loop = event_loop
+        self.last_id = DictOfCounters()
+        self.telemetry_id = telemetry_id
         if statistics is not None:
             self.solve_stats = statistics.Collector("solve")
             self.cache_stats = statistics.Collector("cache eviction")
@@ -586,7 +648,7 @@ class RearView(object):
             PRINT_COROUTINE_ENTRY_EXIT('< db.RearView.process_answer_coro()')
         return
     
-    def process_telemetry(self, json_telemetry):
+    def process_telemetry(self, json_telemetry, peer):
         """Process JSON telemetry.
         
         The telemetry presumably comes from a UDP socket. See ShoDoHFlo/agents/telemetry_agent.py
@@ -596,6 +658,13 @@ class RearView(object):
         """
         try:
             telemetry = loads( json_telemetry )
+            if self.telemetry_id is not None:
+                if not self.last_id.expected( peer, telemetry['id']):
+                    if peer_address in self.last_id:
+                        logging.info('sequence {}: {} -> {}'.format( peer, self.last_id[peer][0]-1, telemetry['id'] ))
+                    else:
+                        logging.info('new peer {}'.format( peer ))
+                    self.last_id.put( peer, telemetry['id'] )
             chain = telemetry['chain']
             for fqdn in chain:
                 if type(fqdn) is not str:
