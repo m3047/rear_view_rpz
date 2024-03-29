@@ -40,6 +40,10 @@ STALE_PEER = 3600   # 1 hour
 PRINT_COROUTINE_ENTRY_EXIT = None
 
 class DictOfCounters(dict):
+    """A dictionary of peers for tracking sequence ids.
+    
+    If expected() is called, put() should only be called if expected() returns False.
+    """
     REAP_FREQUENCY = 60 # Once a minute.
     
     def __init__(self, *args, **kwargs):
@@ -659,12 +663,19 @@ class RearView(object):
         try:
             telemetry = loads( json_telemetry )
             if self.telemetry_id is not None:
-                if not self.last_id.expected( peer, telemetry['id']):
-                    if peer_address in self.last_id:
-                        logging.info('sequence {}: {} -> {}'.format( peer, self.last_id[peer][0]-1, telemetry['id'] ))
+                if not self.last_id.expected( peer, telemetry[self.telemetry_id]):
+                    if peer in self.last_id:
+                        logging.info('sequence {}: {} -> {}'.format( peer, self.last_id[peer][0]-1, telemetry[self.telemetry_id] ))
                     else:
                         logging.info('new peer {}'.format( peer ))
-                    self.last_id.put( peer, telemetry['id'] )
+                    self.last_id.put( peer, telemetry[self.telemetry_id] )
+            else:
+                # No telemetry id. In this case we track the coming and going of peers only.
+                if not peer in self.last_id:
+                    self.last_id[peer] = [0,0]
+                    logging.info('new peer {}'.format( peer ))
+                else:
+                    self.last_id.update_entry( self.last_id[peer], 0)
             chain = telemetry['chain']
             for fqdn in chain:
                 if type(fqdn) is not str:
