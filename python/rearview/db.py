@@ -42,7 +42,8 @@ PRINT_COROUTINE_ENTRY_EXIT = None
 class DictOfCounters(dict):
     """A dictionary of peers for tracking sequence ids.
     
-    If expected() is called, put() should only be called if expected() returns False.
+    If expected() is called, put() should only be called if expected() returns False
+    because update_entry() is called as a side effect.
     """
     REAP_FREQUENCY = 60 # Once a minute.
     
@@ -83,23 +84,35 @@ class DictOfCounters(dict):
         return
     
     def inc(self, k):
-        """Return the postincrement value."""
+        """Increment and return the postincrement value.
+        
+        update_entry() is always called.
+        """
         if k not in self:
             self[k] = [0, 0]
         self.update_entry( self[k] )
         return self[k][0]
     
     def put(self, k, v):
+        """Set a specific value for a key.
+        
+        update_entry() is always called.
+        """
         if k not in self:
             self[k] = [0, 0]
         self.update_entry( self[k], v )
         return
 
     def expected(self, k, v):
-        if k not in self:
+        """Was the value as expected?
+        
+        The value is expected to be monotonically increasing. update_entry() is only
+        called if the value is as expected.
+        """
+        if k not in self or self[k][0] != v:
             return False
         self.update_entry( self[k] )
-        return self[k][0] == v
+        return True
 
 class Address(object):
     """An IP address, with one or more resolutions."""
