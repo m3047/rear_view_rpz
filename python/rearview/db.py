@@ -109,7 +109,7 @@ class DictOfCounters(dict):
         The value is expected to be monotonically increasing. update_entry() is only
         called if the value is as expected.
         """
-        if k not in self or self[k][0] != v:
+        if k not in self or self[k][0]+1 != v:
             return False
         self.update_entry( self[k] )
         return True
