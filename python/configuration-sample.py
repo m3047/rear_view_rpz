@@ -35,7 +35,12 @@ SOCKET_ADDRESS = '/tmp/dnstap'
 # Assuming that 10.0.3.55 is bound to the eth1 network interface, the following will
 # listen on eth1 for datagrams addressed to group 233.252.0.229, port 3053.
 # UDP_LISTENER = dict(recipient='233.252.0.229', port=3053, interface=10.0.3.55)
-UDP_LISTENER = None
+#UDP_LISTENER = None
+
+# It is possible to track a sequence number in the UDP datagrams. The id number emitted
+# by shodohflo/agents/dnstap_agent.py uses the tag "id". You can set this to None
+# to get the old behavior of not tracking a sequence number.
+#TELEMETRY_ID = 'id'
 
 # Explicitly set the logging level if desired.
 #import logging
@@ -51,7 +56,7 @@ LOG_LEVEL = None
 # If statistics reporting is desired, set this to the number of seconds between
 # reports.
 # STATS = 600 # 10 minutes
-STATS = None
+#STATS = None
 
 # Address of the server. This is pretty much always going to be a
 # flavor of localhost.

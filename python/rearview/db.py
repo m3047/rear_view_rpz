@@ -35,7 +35,84 @@ from . import Heuristics, CircularLogger
 from .heuristic import heuristic_func
 from .rpz import RPZ
 
+STALE_PEER = 3600   # 1 hour
+
 PRINT_COROUTINE_ENTRY_EXIT = None
+
+class DictOfCounters(dict):
+    """A dictionary of peers for tracking sequence ids.
+    
+    If expected() is called, put() should only be called if expected() returns False
+    because update_entry() is called as a side effect.
+    """
+    REAP_FREQUENCY = 60 # Once a minute.
+    
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+        self.next_reap = time() + self.REAP_FREQUENCY
+        return
+    
+    def update_entry(self, entry, v=None):
+        """Update / check for stale entries.
+        
+        Each entry is an array with two elements:
+            0   The sequence number we're tracking for the peer.
+            1   The timestamp when the sequence number last changed.
+        """
+        now = time()
+
+        if v is None:
+            entry[0] += 1
+        else:
+            entry[0] = v
+        entry[1] = now
+
+        if now < self.next_reap:
+            return
+        while self.next_reap < now:
+            self.next_reap += self.REAP_FREQUENCY
+
+        reap = now - STALE_PEER
+        to_reap = set()
+        for peer, peer_entry in self.items():
+            if peer_entry[1] < reap:
+                to_reap.add(peer)
+        for peer in to_reap:
+            logging.info('Reaped: {}'.format(peer))
+            del self[peer]
+
+        return
+    
+    def inc(self, k):
+        """Increment and return the postincrement value.
+        
+        update_entry() is always called.
+        """
+        if k not in self:
+            self[k] = [0, 0]
+        self.update_entry( self[k] )
+        return self[k][0]
+    
+    def put(self, k, v):
+        """Set a specific value for a key.
+        
+        update_entry() is always called.
+        """
+        if k not in self:
+            self[k] = [0, 0]
+        self.update_entry( self[k], v )
+        return
+
+    def expected(self, k, v):
+        """Was the value as expected?
+        
+        The value is expected to be monotonically increasing. update_entry() is only
+        called if the value is as expected.
+        """
+        if k not in self or self[k][0]+1 != v:
+            return False
+        self.update_entry( self[k] )
+        return True
 
 class Address(object):
     """An IP address, with one or more resolutions."""
@@ -358,8 +435,10 @@ class RearView(object):
     DEFAULT_CACHE_SIZE = 10000
     
     def __init__(self, event_loop, dns_server, rpz, statistics=None, cache_size=None,
-                 address_record_types=DEFAULT_ADDRESS_RECORDS, garbage_logger=logging.warning):
+                 address_record_types=DEFAULT_ADDRESS_RECORDS, garbage_logger=logging.warning, telemetry_id=None):
         self.event_loop = event_loop
+        self.last_id = DictOfCounters()
+        self.telemetry_id = telemetry_id
         if statistics is not None:
             self.solve_stats = statistics.Collector("solve")
             self.cache_stats = statistics.Collector("cache eviction")
@@ -586,7 +665,7 @@ class RearView(object):
             PRINT_COROUTINE_ENTRY_EXIT('< db.RearView.process_answer_coro()')
         return
     
-    def process_telemetry(self, json_telemetry):
+    def process_telemetry(self, json_telemetry, peer):
         """Process JSON telemetry.
         
         The telemetry presumably comes from a UDP socket. See ShoDoHFlo/agents/telemetry_agent.py
@@ -596,6 +675,20 @@ class RearView(object):
         """
         try:
             telemetry = loads( json_telemetry )
+            if self.telemetry_id is not None:
+                if not self.last_id.expected( peer, telemetry[self.telemetry_id]):
+                    if peer in self.last_id:
+                        logging.info('sequence {}: {} -> {}'.format( peer, self.last_id[peer][0]-1, telemetry[self.telemetry_id] ))
+                    else:
+                        logging.info('new peer {}'.format( peer ))
+                    self.last_id.put( peer, telemetry[self.telemetry_id] )
+            else:
+                # No telemetry id. In this case we track the coming and going of peers only.
+                if not peer in self.last_id:
+                    self.last_id[peer] = [0,0]
+                    logging.info('new peer {}'.format( peer ))
+                else:
+                    self.last_id.update_entry( self.last_id[peer], 0)
             chain = telemetry['chain']
             for fqdn in chain:
                 if type(fqdn) is not str:
