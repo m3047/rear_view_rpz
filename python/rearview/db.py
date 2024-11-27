@@ -689,6 +689,8 @@ class RearView(object):
                     logging.info('new peer {}'.format( peer ))
                 else:
                     self.last_id.update_entry( self.last_id[peer], 0)
+            if telemetry['status'] != 'NOERROR':
+                return
             chain = telemetry['chain']
             for fqdn in chain:
                 if type(fqdn) is not str:
