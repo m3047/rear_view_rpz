@@ -127,12 +127,18 @@ class UDPListener(asyncio.DatagramProtocol):
         rear_view   Set via code after the object is instantiated.
     """
     
+    def __init__(self, *args, **kwargs):
+        asyncio.DatagramProtocol.__init__(self, *args, **kwargs)
+        self.rear_view = None
+        return
+    
     def connection_made(self, transport):
         self.transport = transport
         return
     
     def datagram_received(self, datagram, addr):
-        self.rear_view.process_telemetry( datagram, addr )
+        if self.rear_view:
+            self.rear_view.process_telemetry( datagram, addr )
         return
 
 class DnsTap(Consumer):
