@@ -260,9 +260,17 @@ class Resolution(Heuristics):
         return
     
 class Associator(object):
+    """Handles resolving FQDN to address associations.
+    
+    The constants defined here pertain to the operation of do_cache_eviction().
+    """
     
     EVICTION_POOL_BASE_SIZE = 10
-    EVICTION_POOL_MULTIPLIER = 1.2
+    EVICTION_POOL_MULTIPLIER = 1.5
+    # Optimal number of evictions per eviction cycle.
+    CACHE_OVERAGE_TARGET = 4
+    # Evictions run at least this often, in seconds.
+    CACHE_EVICTION_DELAY_TARGET = 0.1
     
     def __init__(self, cache_size, cache_eviction):
         self.cache_size = cache_size
@@ -411,7 +419,7 @@ class Associator(object):
         self.logger['n_addresses'] = len(addresses)
         self.logger['n_resolutions'] = self.n_resolutions
         
-        return affected_addresses.copy(), recycled.copy()
+        return affected_addresses.copy(), recycled.copy(), overage
     
 class InvalidTelemetryException(LookupError):
     """Telemetry is incorrect."""
@@ -456,7 +464,8 @@ class RearView(object):
                                 )
         self.processor_ = self.event_loop.create_task(self.queue_processor())
         self.rpz = RPZ(event_loop, dns_server, rpz, statistics, address_record_types, garbage_logger)
-        self.cache_eviction_scheduled = False
+        self.cache_eviction_delay = self.associations.CACHE_EVICTION_DELAY_TARGET / self.associations.CACHE_OVERAGE_TARGET
+        self.cache_eviction_scheduled = None
 
         # Kick off a job to load the context with AXFR.
         self.rpz.create_task(self.rpz.load_axfr(self.associations, self.rpz.timer('axfr_stats')))
@@ -531,8 +540,10 @@ class RearView(object):
         if PRINT_COROUTINE_ENTRY_EXIT:
             PRINT_COROUTINE_ENTRY_EXIT('> db.RearView.do_cache_eviction()')
 
+        await asyncio.sleep( self.cache_eviction_delay )
+
         try:
-            affected, recycled = self.associations.do_cache_eviction()
+            affected, recycled, overage = self.associations.do_cache_eviction()
             batch = []
             logger = self.rpz.batch_logger
             # We are making an assumption that recycled is "clean" but maybe that's incorrect
@@ -562,6 +573,17 @@ class RearView(object):
         except Exception as e:
             traceback.print_exc()
             self.event_loop.stop()
+
+        # Adjust how long the eviction delay is depending on how many evictions were processed
+        # during this event.
+        bias = overage / self.associations.CACHE_OVERAGE_TARGET
+        if   bias > 1.5:
+            self.cache_eviction_delay *= 1 - 0.5 * (1 - self.associations.CACHE_OVERAGE_TARGET / overage)
+        elif bias < 0.8:
+            self.cache_eviction_delay *= 1.1
+            if self.cache_eviction_delay > self.associations.CACHE_EVICTION_DELAY_TARGET:
+                self.cache_eviction_delay = self.associations.CACHE_EVICTION_DELAY_TARGET            
+        # else do nothing
 
         # At this point if there was an exception then the loop is stopping anyway,
         # but maybe it's a little clearer that this is a finalizer if it's out here.
