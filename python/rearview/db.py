@@ -633,60 +633,6 @@ class RearView(object):
             PRINT_COROUTINE_ENTRY_EXIT('< db.RearView.process_resolution_coro()')
         return
 
-    def process_answer_(self, response):
-        """Internal memory view updater."""
-
-        # associations becomes a reverse lookup.
-        associations = {}
-        addresses = set()
-        for rrset in response.answer:
-            qname = rrset.name.to_text().lower()
-            for rr in rrset:
-                rval = rr.to_text().lower()
-                associations[rval] = qname
-                if rrset.rdtype in self.address_record_types:
-                    addresses.add(rval)
-
-        added = []
-        for address in addresses:
-            lhs = address
-            seen = set()
-            chain = []
-            while lhs in associations:
-                if lhs in seen:
-                    break
-                seen.add(lhs)
-                lhs = associations[lhs]
-                chain.append(lhs)
-            chain = tuple(chain)
-            
-            # Add / update the resolution.
-            if self.associations.update_resolution(address, chain):      # Implicit: schedules cache eviction.
-                added.append(address)
-        
-        return added
-    
-    async def process_answer_coro(self, response, timer):
-        """Coroutine generating updates to the memory view.
-        
-        Scheduling:
-            Cache eviction.
-            Solvers.
-        """
-        if PRINT_COROUTINE_ENTRY_EXIT:
-            PRINT_COROUTINE_ENTRY_EXIT('> db.RearView.process_answer_coro()')
-
-        for address in self.process_answer_(response):
-            self.solver_queue.put_nowait(
-                self.solve(address, self.solve_stats and self.solve_stats.start_timer() or None)
-            )
-            
-        if self.answer_stats:
-            timer.stop()
-        if PRINT_COROUTINE_ENTRY_EXIT:
-            PRINT_COROUTINE_ENTRY_EXIT('< db.RearView.process_answer_coro()')
-        return
-    
     def process_telemetry(self, json_telemetry, peer):
         """Process JSON telemetry.
         
@@ -730,21 +676,6 @@ class RearView(object):
             self.process_resolution_coro( telemetry, self.telemetry_stats and self.telemetry_stats.start_timer() or None)
         )
         
-        return
-
-    def process_answer(self, response):
-        """Process the supplied DNS answer RRset generating updates to the memory view.
-        
-        Scheduling:
-            Association queue.
-        """
-        if response.question[0].rdtype not in self.address_record_types:
-            return
-
-        self.association_queue.put_nowait(
-            self.process_answer_coro(response, self.answer_stats and self.answer_stats.start_timer() or None)
-        )
-
         return
 
     async def queue_processor(self):

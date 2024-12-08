@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021 by Fred Morris Tacoma WA
+# Copyright (c) 2021,2024 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -322,11 +322,11 @@ class TestAssociatorEviction(TestCase):
         mock_cache_eviction.assert_called()
         self.assertEqual(len(associator.cache), self.CACHE_SIZE + 10)
 
-        addresses,recycled = associator.do_cache_eviction()
+        addresses,recycled,overage = associator.do_cache_eviction()
         
         self.assertEqual(len(associator.cache), self.CACHE_SIZE)
         self.assertEqual(len(addresses), 10)
-        self.assertEqual(len(recycled), 12)
+        self.assertEqual(len(recycled), db.Associator.EVICTION_POOL_BASE_SIZE * db.Associator.EVICTION_POOL_MULTIPLIER)
         self.assertEqual(len(recycled & addresses), 0)  # no common elements
         self.assertEqual(associator.n_resolutions, self.CACHE_SIZE)
         
@@ -348,7 +348,7 @@ class TestAssociatorEviction(TestCase):
         self.assertEqual(len(associator.addresses[self.BASE_ADDRESS].resolutions), self.CACHE_SIZE)
         self.assertEqual(len(associator.cache), 11)
 
-        addresses,recycled = associator.do_cache_eviction()
+        addresses,recycled,overage = associator.do_cache_eviction()
         
         self.assertEqual(len(addresses), 6)
         self.assertEqual(len(recycled), 1)
@@ -372,7 +372,7 @@ class TestAssociatorEviction(TestCase):
         self.assertEqual(len(associator.addresses[self.BASE_ADDRESS].resolutions), self.CACHE_SIZE)
         self.assertEqual(len(associator.cache), 3)
 
-        addresses,recycled = associator.do_cache_eviction()
+        addresses,recycled,overage = associator.do_cache_eviction()
         self.assertEqual(len(addresses), 1)
         self.assertEqual(len(recycled), 0)
         self.assertEqual(len(associator.cache), 3)
@@ -399,22 +399,6 @@ class TestRearView(TestCase):
         ('this.wont.get.chosen.example.com',),
         ('foo.example.com', 'www.example.com')
     )
-    
-    MESSAGE = """
-        id 4100
-        opcode QUERY
-        rcode NOERROR
-        flags QR AA RD RA
-        ;QUESTION
-        docs.m3047. IN A
-        ;ANSWER
-        DOCS.m3047. 600 IN CNAME SOPHIA.M3047.
-        SOPHIA.m3047. 600 IN A 10.0.0.224
-        ;AUTHORITY
-        m3047. 600 IN NS ATHENA.m3047.
-        ;ADDITIONAL
-        ATHENA.m3047. 600 IN A 10.0.0.220
-    """
     
     def basic_rear_view(self):
         associations = db.Associator(self.CACHE_SIZE, Mock())
@@ -459,18 +443,6 @@ class TestRearView(TestCase):
         self.assertTrue(need_update)
         
         self.assertEqual(address.best_resolution.chain, self.RESOLUTIONS[1])
-        
-        return
-    
-    def test_process_answer(self):
-        """DNS response to telemetry view processing."""
-        mock_RV, associator = self.basic_rear_view()
-        msg = reconstitute(self.MESSAGE)
-
-        added = db.RearView.process_answer_(mock_RV, msg)
-        self.assertEqual(len(added), 1)
-        self.assertEqual(added[0], '10.0.0.224')
-        self.assertTrue(('sophia.m3047.', 'docs.m3047.') in associator.addresses['10.0.0.224'].resolutions)
         
         return
     

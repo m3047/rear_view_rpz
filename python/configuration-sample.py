@@ -1,13 +1,6 @@
 # Configuration for Rear View RPZ
 
-# Dnstap unix domain socket on local host. THIS NEEDS TO ALWAYS BE DEFINED, even
-# if you're exclusively utilizing UDP datagrams.
-# NOTE: EVENTUALLY THIS WILL GO AWAY and all incoming telemetry will be expected via
-#       UDP datagrams. For now though, both mechanisms work.
-SOCKET_ADDRESS = '/tmp/dnstap'
-
-# The agent can listen for telemetry on a UDP socket. If you want this specify a
-# local interface address and port number. See ShoDoHFlo/agents for more information.
+# The agent listens for telemetry on a UDP socket. You MUST define UDP_LISTENER!
 # 
 # Multicast Support
 # -----------------
@@ -35,7 +28,6 @@ SOCKET_ADDRESS = '/tmp/dnstap'
 # Assuming that 10.0.3.55 is bound to the eth1 network interface, the following will
 # listen on eth1 for datagrams addressed to group 233.252.0.229, port 3053.
 # UDP_LISTENER = dict(recipient='233.252.0.229', port=3053, interface=10.0.3.55)
-#UDP_LISTENER = None
 
 # It is possible to track a sequence number in the UDP datagrams. The id number emitted
 # by shodohflo/agents/dnstap_agent.py uses the tag "id". You can set this to None
@@ -50,8 +42,9 @@ LOG_LEVEL = None
 # This one is similar to LOG_LEVEL. It's really intended for internal / debugging
 # use, but this way it doesn't get inadvertently left turned on when I commit
 # code. Unlike LOG_LEVEL this isn't the logging level but the routine to call
-# to actually print the message.
-#PRINT_COROUTINE_ENTRY_EXIT = logging.info
+# to actually print the message:
+# PRINT_COROUTINE_ENTRY_EXIT = logging.info
+#PRINT_COROUTINE_ENTRY_EXIT = None
 
 # If statistics reporting is desired, set this to the number of seconds between
 # reports.

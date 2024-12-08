@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021-2023 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2024 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -110,16 +110,9 @@ Batches go through three phases, at least for logging purposes:
 Scheduled Coroutines
 --------------------
 
-    coro(tines}
+    coro(utines}
     
 Displays counts of all scheduled coroutines.
-
-Processors
------------------
-
-    proc{essors}
-
-Tracks shodohflo.fstrm frame processors.
 
 Quit
 ----
@@ -164,13 +157,12 @@ class Request(object):
     """
 
     COMMANDS = dict(a2z=1, address=2, entry=2, qd=1, cache=3, evictions=2, refresh=2,
-                    coroutines=1, processors=1, quit=1, exit=1
+                    coroutines=1, quit=1, exit=1
                 )
     ABBREVIATED = { k for k in COMMANDS.keys() if len(k) > 4 }
 
-    def __init__(self, message, dnstap_consumer, dnstap_server):
-        self.rear_view = dnstap_consumer.rear_view
-        self.dnstap_server = dnstap_server
+    def __init__(self, message, service ):
+        self.rear_view = service.rear_view
         self.response = ""
         self.quit_session = False
         request = message.strip().split()
@@ -536,11 +528,6 @@ class Request(object):
         
         return 200, response
     
-    def processors(self, request):
-        """Fstrm Coroutine references stashed in a set to make them strong."""
-        server = self.dnstap_server
-        return 200, [ 'Processors: {}   Tasks: {}'.format( len(server.processors), sum( len(p.tasks) for p in server.processors ) )  ]
-                
     def quit(self, request):
         """quit / exit"""
         self.quit_session = True
@@ -554,16 +541,16 @@ class Request(object):
 
 class Context(object):
     """Context for the console."""
-    def __init__(self, dnstap=None, server=None):
+    
+    def __init__(self, service=None):
         """Create a context object.
         
-        dnstap and server are normally set in code, but we pass them in with
+        service is normally set in code, but we pass them in with
         a default of None to make their presence known.
         """
-        self.dnstap = dnstap
-        self.server = server
+        self.service = service
         return
-    
+
     async def handle_requests(self, reader, writer):
         remote_addr = writer.get_extra_info('peername')
         while True:
@@ -577,7 +564,7 @@ class Context(object):
             if not message:
                 break
 
-            request = Request(message, self.dnstap, self.server)
+            request = Request( message, service )
             if request.quit_session:
                 break
             if not request.response:
