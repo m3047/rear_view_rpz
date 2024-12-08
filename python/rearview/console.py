@@ -564,7 +564,7 @@ class Context(object):
             if not message:
                 break
 
-            request = Request( message, service )
+            request = Request( message, self.service )
             if request.quit_session:
                 break
             if not request.response:
