@@ -453,7 +453,7 @@ class RearView(object):
             self.answer_stats = statistics.Collector("process answer")
             self.telemetry_stats = statistics.Collector("process telemetry")
         else:
-            self.solve_stats = self.cache_stats = self.answer_stats = None
+            self.solve_stats = self.cache_stats = self.answer_stats = self.telemetry_stats = None
 
         self.address_record_types = address_record_types
         
