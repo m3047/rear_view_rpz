@@ -9,8 +9,8 @@
 
 ***what could go wrong?***
 
+1. Clone https://github.com/m3047/shodohflo and set up `agents/dnstap_agent.py` (to create a source of data).
 1. Clone this repo.
-1. Clone https://github.com/m3047/shodohflo in the same directory.
 1. Copy `configuration-sample.py` to `configuration.py` and make any desired edits.
 1. Create the RPZ in your _BIND_ configuration (`named.conf`)
 1. As `root`: `cd python; ./agent.py`
@@ -45,23 +45,23 @@ In the `options` section add the following, changing the name of the zone as app
 
 ###### Is Dnstap working?
 
-The simplest way that I know of to tell is to run `../../shodohflo/examples/dnstap2json.py` and it should spew (abbreviated)
-output to the console:
+You can use _netcat_ (`nc`) to monitor unicast datagrams (`nc -luk ...`) or my [multicast tool](https://athena.m3047.net/pub/python/multicast/) `receiver.py` to monitor multicast datagrams output by `dnstap_agent.py`:
 
 ```
-# ../../shodohflo/examples/dnstap2json.py /tmp/dnstap
-INFO:root:dnstap2json starting. Socket: /tmp/dnstap  Destination: STDOUT
-INFO:root:Accepting: protobuf:dnstap.Dnstap
-{"client": "10.0.0.224", "qtype": "AAAA", "status": "NOERROR", "chain": [["infoblox.com."], ["2620:12a:8001::3", "2620:12a:8000::3"]]}
-{"client": "10.0.0.224", "qtype": "A", "status": "NOERROR", "chain": [["www.worldtimeserver.com."], ["54.39.158.232"]]}
-{"client": "10.0.0.118", "qtype": "A", "status": "NOERROR", "chain": [["pool.ntp.org."], ["64.142.54.12", "208.67.72.50", "45.15.168.98", "137.190.2.4"]]}
+# ./receiver.py 224.4.102.250:1959 10.0.0.220
+('10.0.0.220', 52920): {"chain": ["ntp1.glb.nist.gov.", "time.nist.gov."], "client": "10.0.0.118", "qtype": "A", "status": "NOERROR", "id": 239137, "address": "132.163.97.6"}
+('10.0.0.220', 52920): {"chain": ["austin.logs.roku.com."], "client": "10.0.1.213", "qtype": "A", "status": "NOERROR", "id": 239138, "address": "35.212.73.121"}
+('10.0.0.220', 52920): {"chain": ["austin.logs.roku.com."], "client": "10.0.1.213", "qtype": "A", "status": "NOERROR", "id": 239139, "address": "35.212.66.177"}
+('10.0.0.220', 52920): {"chain": ["austin.logs.roku.com."], "client": "10.0.1.213", "qtype": "A", "status": "NOERROR", "id": 239140, "address": "35.212.119.44"}
+('10.0.0.220', 52920): {"chain": ["austin.logs.roku.com."], "client": "10.0.1.213", "qtype": "A", "status": "NOERROR", "id": 239141, "address": "35.212.38.156"}
 ```
+
+Similarly you can use `nc -u...` or `sender.py` to set arbitrary packets to the _Rearview agent_ for testing. (Left as an exercise for the reader.)
 
 ###### Dnstap is technically optional
 
-The _Rearview agent_ has the capability to ingest telemetry in JSON format via a UDP socket. If you have that source of telemetry
-then technically you don't need to set up _BIND_ to write to the unix socket. At least for the time being, you do still need to
-configure the socket, even if it will be unused.
+Since the _Rearview agent_ ingests telemetry in JSON format via a UDP socket, if you have some other source for that telemetry
+then technically you don't need to set up _BIND_ and `dnstap_agent.py` to generate it.
 
 #### Zone Declaration
 
