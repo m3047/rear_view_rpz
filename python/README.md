@@ -1,7 +1,3 @@
-**NOTE**: `shodohflo` is a symlink to https://github.com/m3047/shodohflo/tree/master/shodohflo which you should also download.
-
-See the [`/install`](/install) directory for installation instructions.
-
 ### `configuration.py`
 
 Hopefully the comments will get you where you need to go, but here are my "hot takes".
@@ -49,19 +45,18 @@ an address in all of the views, depths of processing queues (not the same as sta
 about the cache eviction queue.
 
 ### Ingesting Telemetry
+
 Defining `UDP_LISTENER` in the configuration file enables a UDP listener which expects telemetry in
-JSON format. This can be used in lieu of or in addition to receipt of _Dnstap_ telemetry.
+JSON format.
 
-For simple, standalone use _Dnstap_ is straightforward. If you have telemetry from multiple caching
-nameservers (or from some other source entirely) then this may be a useful option.
+It's possible to have multiple nameservers / `dnstap_agent.py` instances sending unicast telemetry
+to a single _Rearview_ instance. With multicast this becomes a full "party line" supporting multiple
+senders and receivers of the telemetry data.
 
-At the moment work is ongoing in [ShoDoHFlo](https://github.com/m3047/shodohflo) to split the existing
-_DNS Agent_ which reads _Dnstap_ telemetry into separate _Dnstap_ and _DNS_ parts.
-
-The fields which _Rearview_ expects to see are `address` and `chain` as documented in m3047/shodohflo#11:
+The fields which _Rearview_ expects to see are `address`, `chain`, and `status` as documented in m3047/shodohflo#11:
 
 ```
-{"address":"10.2.66.5","chain":["server.example.com.","www.example.com."]}
+{"address":"10.2.66.5","chain":["server.example.com.","www.example.com."],"status":"NOERROR"}
 ```
 
 Note that the chain is ***reversed*** from normal understanding. The semantics above should be understood as
