@@ -636,7 +636,7 @@ class RearView(object):
     def process_telemetry(self, json_telemetry, peer):
         """Process JSON telemetry.
         
-        The telemetry presumably comes from a UDP socket. See ShoDoHFlo/agents/telemetry_agent.py
+        The telemetry presumably comes from a UDP socket. See ShoDoHFlo/agents/dnstap_agent.py
         
         Scheduling:
             Association queue.
