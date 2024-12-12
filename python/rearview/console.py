@@ -415,6 +415,7 @@ class Request(object):
                     len(entry['affected_addresses']), len(entry['deleted_addresses'])
                 )
             )
+            response.append('Delay (ms):{:7.2f}'.format(entry['eviction_delay']))
             response.append(
                 'Affected:'
             )

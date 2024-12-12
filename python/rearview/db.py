@@ -368,12 +368,13 @@ class Associator(object):
 
         return
     
-    def do_cache_eviction(self):
+    def do_cache_eviction(self, eviction_delay):
         """Performs the actual cache eviction on behalf of the coprocess."""
         self.logger.rotate()
         
         overage = self.n_resolutions - self.cache_size
         target_pool_size = int(overage * self.EVICTION_POOL_MULTIPLIER + self.EVICTION_POOL_BASE_SIZE)
+        self.logger['eviction_delay'] = eviction_delay
         self.logger['overage'] = overage
         self.logger['target_pool_size'] = target_pool_size
 
@@ -543,7 +544,7 @@ class RearView(object):
         await asyncio.sleep( self.cache_eviction_delay )
 
         try:
-            affected, recycled, overage = self.associations.do_cache_eviction()
+            affected, recycled, overage = self.associations.do_cache_eviction(self.cache_eviction_delay)
             batch = []
             logger = self.rpz.batch_logger
             # We are making an assumption that recycled is "clean" but maybe that's incorrect
