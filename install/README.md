@@ -38,10 +38,9 @@ In the `options` section add the following, changing the name of the zone as app
      response-policy {
          zone "rearview.example.com";
      };
-
-     dnstap { client response; };
-     dnstap-output unix "/tmp/dnstap";
 ```
+
+**NOTE**: You will (also) add `dnstap` and `dnstap-output` stanzas when setting up the _ShoDoHFlo_ `dnstap_agent`.
 
 ###### Is Dnstap working?
 
