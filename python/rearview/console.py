@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021-2024 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2025 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,6 +56,19 @@ of cryptic legends and numbers. Those are:
 * qc query count
 * qt query trend
 * h  heuristic or score
+
+Hot addresses
+-------------
+
+    hot{addresses} {>|+} <n-addresses>
+    
+Returns a report of addresses with the most resolutions, along with the
+corresponding resolution chains. n-addresses represents either the number
+of addresses to return if "+" is passed, or else a cutoff (i.e. "greater than")
+if ">" is supplied.
+
+This probably should be used sparingly or not at all on a busy server, but
+may prove useful in identifying addresses with excessive associated FQDNs.
 
 Zone details
 ------------
@@ -156,7 +169,7 @@ class Request(object):
     to do.
     """
 
-    COMMANDS = dict(a2z=1, address=2, entry=2, qd=1, cache=3, evictions=2, refresh=2,
+    COMMANDS = dict(a2z=1, hotaddresses=3, address=2, entry=2, qd=1, cache=3, evictions=2, refresh=2,
                     coroutines=1, quit=1, exit=1
                 )
     ABBREVIATED = { k for k in COMMANDS.keys() if len(k) > 4 }
@@ -230,6 +243,41 @@ class Request(object):
                 del zonekeys[0]
                 
         return 200, response
+    
+    def hotaddresses(self, request):
+        """hotaddresses {+|>} <value>
+        
+        Returns addresses which have a lot of resolutions. Should probably be
+        run seldom or never on a busy server.
+        """
+
+        mode = request[1]
+        if mode not in ('+','>'):
+            return self.bad_request('expected mode of either "+" or ">"')
+            
+        try:
+            value = int(request[2])
+            if value < 1:
+                raise ValueError
+        except:
+            return self.bad_request('expected a positive integer value')
+
+        n = 0
+        response = []
+        for addr in sorted( self.rear_view.associations.addresses.values(),
+                            key=lambda address:(-1 * len(address.resolutions), address.address)
+                    ):
+            n += 1
+            if mode == '+':
+                if n > value:
+                    break
+            else:
+                if len(addr.resolutions) <= value:
+                    break
+            
+            response.append('{:<15s} {:>2d}'.format( addr.address, len(addr.resolutions) ))
+        
+        return 200, response
 
     def address(self, request):
         """addr{ess} <some-address>
@@ -295,7 +343,13 @@ class Request(object):
         return 200, response
 
     def entry(self, request):
-        """entry <some-address>"""
+        """entry <some-address>
+        
+        Compare the memory and RPZ views of an address.
+        
+        Makes a synchronous dns request for the PTR record. Should probably be
+        run seldom or never on a busy server.
+        """
         addr = request[1]
         zone_key = address_to_reverse(addr)
         rpz = self.rear_view.rpz
