@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021-2024 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2025 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -381,6 +381,7 @@ class Associator(object):
         addresses = []
         candidates = []
         working_pool_size = 0
+        # Build our pool of candidate resolutions to be reaped.
         while working_pool_size < target_pool_size:
             if not self.cache:
                 break
@@ -394,29 +395,44 @@ class Associator(object):
         
         affected_addresses = set()
         deleted_addresses = set()
+        # Do the ritual for deletion of resolutions, and potentially addresses.
         for i in range(overage):
+            # score is implicitly utilized by the heap queue for prioritization.
             score, unused, address, resolution = heappop(candidates)
             affected_addresses.add(address.address)
+            # If the function returns True then the address has no remaining resolutions.
             if address.delete_resolution(resolution):
                 del self.addresses[address.address]
                 deleted_addresses.add(address.address)
             self.n_resolutions -= 1
             
-        # If there was only one address in the candidate pool and it still has more than
-        # enough to be trimmed, we don't rotate.
-        recycled = set()
-        if len(addresses) == 1 and len(addresses[0].resolutions) >= target_pool_size:
-            self.cache.append(addresses[0])
-            self.logger['single_address'] = len(addresses[0].resolutions)
-        else:
-            for address in addresses:
-                if address.address not in deleted_addresses:
-                    recycled.add(address.address)
-                    self.cache.appendleft(address)
-            self.logger['recycled_addresses'] = recycled
-
         self.logger['affected_addresses'] = affected_addresses
         self.logger['deleted_addresses'] = deleted_addresses
+
+        recycled = set()
+        remaining = sorted(
+                ( address for address in addresses if address.address not in deleted_addresses ),
+                key=lambda element:len(element.resolutions)
+            )
+        # At this point, remaining is devoid of addresses which have been deleted.
+
+        self.logger['single_address'] = remaining and len(remaining[-1].resolutions) or 0  # Console evictions usage only
+
+        # If the address in the candidate pool with the most remaining resolutions
+        # still has enough remaining to meet the pool target we don't rotate it.
+        # SMELL: This is targeted at addresses which accumulate large numbers of
+        #        resolutions, oftentimes (defacto or otherwise) honeypots and CDNs.
+        if remaining and len(remaining[-1].resolutions) >= target_pool_size:
+            address = remaining.pop(-1)
+            recycled.add(address.address)
+            self.cache.append(address)
+        
+        for address in remaining:
+            recycled.add(address.address)
+            self.cache.appendleft(address)
+
+        self.logger['recycled_addresses'] = recycled
+
         self.logger['n_addresses'] = len(addresses)
         self.logger['n_resolutions'] = self.n_resolutions
         
