@@ -470,7 +470,7 @@ class RPZ(object):
         Returns True if there is an update to be performed.
         """
         if not address.best_resolution:
-            logging.error(
+            logging.warning(
                 'update_(): best_resolution is None for address:{} with resolutions:{}'.format(
                     address.address, [ k for k in address.resolutions.keys() ]
                 )
