@@ -713,7 +713,7 @@ class RearView(object):
 
             try:
                 await task
-                queue.task_done()
+                queue.task_done()   # association_queue
             except Exception as e:
                 traceback.print_exc()
                 self.event_loop.stop()
