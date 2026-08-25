@@ -312,7 +312,6 @@ class Associator(object):
         if address not in self.addresses:
             self.addresses[address] = Address(address)
             self.cache.appendleft(self.addresses[address])
-        else:
         address = self.addresses[address]
         address.seen()
 
