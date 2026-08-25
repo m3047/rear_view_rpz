@@ -172,7 +172,6 @@ class Address(object):
         is seen with the same depth and final element is seen, the resurrected
         resolution is merged with it.
         """
-        chain_depth = len(chain)
         def matchfunc(resolution):
             return self.identical_reloaded_resolution(resolution, chain)
         match = self.match_resolution(matchfunc)
@@ -313,6 +312,7 @@ class Associator(object):
         if address not in self.addresses:
             self.addresses[address] = Address(address)
             self.cache.appendleft(self.addresses[address])
+        else:
         address = self.addresses[address]
         address.seen()
 
