@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (c) 2021-2025 by Fred Morris Tacoma WA
+# Copyright (c) 2021-2026 by Fred Morris Tacoma WA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -172,7 +172,6 @@ class Address(object):
         is seen with the same depth and final element is seen, the resurrected
         resolution is merged with it.
         """
-        chain_depth = len(chain)
         def matchfunc(resolution):
             return self.identical_reloaded_resolution(resolution, chain)
         match = self.match_resolution(matchfunc)
@@ -684,6 +683,8 @@ class RearView(object):
                     raise InvalidTelemetryException('"chain" element "{}" missing trailing "."'.format(fqdn))
             if type(chain) is not tuple:
                 telemetry['chain'] = tuple(chain)
+            if 'address' not in telemetry:
+                return
             ignore = ip_address(telemetry['address'])
         except Exception as e:
             logging.error('Telemetry: {}: {}'.format(type(e).__name__, e))
